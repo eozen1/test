@@ -1,0 +1,393 @@
+// Analytics and Reporting Data Model
+// Tracks user behavior, events, dashboards, and alerting
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  plan        Plan     @default(FREE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projects    Project[]
+  members     OrganizationMember[]
+  apiKeys     ApiKey[]
+  alerts      AlertRule[]
+
+  @@index([slug])
+}
+
+model OrganizationMember {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MemberRole     @default(VIEWER)
+  joinedAt       DateTime       @default(now())
+
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  user           User           @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  avatarUrl     String?
+  lastActiveAt  DateTime?
+  createdAt     DateTime @default(now())
+
+  memberships   OrganizationMember[]
+  dashboards    Dashboard[]
+  savedQueries  SavedQuery[]
+  annotations   EventAnnotation[]
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  timezone       String   @default("UTC")
+  dataRetention  Int      @default(90) // days
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  archivedAt     DateTime?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventTypes     EventType[]
+  events         Event[]
+  funnels        Funnel[]
+  cohorts        Cohort[]
+  dashboards     Dashboard[]
+  alertRules     AlertRule[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model ApiKey {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  keyHash        String   @unique
+  prefix         String   // first 8 chars for identification
+  permissions    ApiPermission[]
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([keyHash])
+  @@index([organizationId])
+}
+
+model EventType {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  category    String?
+  description String?
+  schema      Json?    // JSON Schema for event properties
+  volume      BigInt   @default(0)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  events      Event[]
+  funnelSteps FunnelStep[]
+
+  @@unique([projectId, name])
+  @@index([projectId, category])
+}
+
+model Event {
+  id           String   @id @default(cuid())
+  projectId    String
+  eventTypeId  String
+  sessionId    String?
+  userId       String?  // anonymous or identified user
+  deviceId     String?
+  properties   Json     @default("{}")
+  timestamp    DateTime
+  receivedAt   DateTime @default(now())
+  ip           String?
+  userAgent    String?
+  country      String?
+  region       String?
+  city         String?
+
+  project      Project   @relation(fields: [projectId], references: [id])
+  eventType    EventType @relation(fields: [eventTypeId], references: [id])
+  annotations  EventAnnotation[]
+
+  @@index([projectId, timestamp])
+  @@index([projectId, eventTypeId, timestamp])
+  @@index([sessionId])
+  @@index([userId, timestamp])
+  @@index([deviceId])
+}
+
+model EventAnnotation {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  note      String
+  createdAt DateTime @default(now())
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([eventId])
+}
+
+model Funnel {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  windowHours Int      @default(24) // conversion window
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  steps       FunnelStep[]
+  results     FunnelResult[]
+
+  @@unique([projectId, name])
+}
+
+model FunnelStep {
+  id          String   @id @default(cuid())
+  funnelId    String
+  eventTypeId String
+  position    Int
+  filters     Json?    // property filters for this step
+
+  funnel      Funnel    @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+
+  @@unique([funnelId, position])
+  @@index([eventTypeId])
+}
+
+model FunnelResult {
+  id             String   @id @default(cuid())
+  funnelId       String
+  periodStart    DateTime
+  periodEnd      DateTime
+  stepCounts     Json     // { "step_0": 1000, "step_1": 500, ... }
+  conversionRate Float
+  medianTimeMs   BigInt?
+  calculatedAt   DateTime @default(now())
+
+  funnel         Funnel   @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+
+  @@unique([funnelId, periodStart, periodEnd])
+  @@index([funnelId, periodStart])
+}
+
+model Cohort {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  definition  Json     // rules defining cohort membership
+  userCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members     CohortMember[]
+
+  @@unique([projectId, name])
+}
+
+model CohortMember {
+  id          String   @id @default(cuid())
+  cohortId    String
+  externalUserId String  // user ID from the tracked app
+  addedAt     DateTime @default(now())
+  removedAt   DateTime?
+
+  cohort      Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+
+  @@unique([cohortId, externalUserId])
+  @@index([externalUserId])
+}
+
+model Dashboard {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  layout      Json?    // grid layout config
+  refreshRate Int?     // seconds, null = manual
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner       User           @relation(fields: [userId], references: [id])
+  widgets     DashboardWidget[]
+
+  @@index([projectId, userId])
+}
+
+model DashboardWidget {
+  id           String   @id @default(cuid())
+  dashboardId  String
+  savedQueryId String?
+  title        String
+  type         WidgetType
+  config       Json     // visualization config
+  position     Json     // { x, y, width, height }
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dashboard    Dashboard  @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  savedQuery   SavedQuery? @relation(fields: [savedQueryId], references: [id])
+
+  @@index([dashboardId])
+}
+
+model SavedQuery {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  queryDsl    Json     // structured query definition
+  resultType  ResultType
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User              @relation(fields: [userId], references: [id])
+  widgets     DashboardWidget[]
+  schedules   QuerySchedule[]
+
+  @@index([userId])
+}
+
+model QuerySchedule {
+  id           String   @id @default(cuid())
+  savedQueryId String
+  cronExpr     String
+  timezone     String   @default("UTC")
+  destination  Json     // email, slack webhook, etc.
+  enabled      Boolean  @default(true)
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+
+  savedQuery   SavedQuery @relation(fields: [savedQueryId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, nextRunAt])
+}
+
+model AlertRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  name           String
+  description    String?
+  metric         String
+  condition      AlertCondition
+  threshold      Float
+  windowMinutes  Int      @default(5)
+  cooldownMinutes Int     @default(30)
+  channels       Json     // notification channels
+  enabled        Boolean  @default(true)
+  lastTriggeredAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  incidents      AlertIncident[]
+
+  @@index([projectId, enabled])
+  @@index([organizationId])
+}
+
+model AlertIncident {
+  id          String   @id @default(cuid())
+  alertRuleId String
+  status      IncidentStatus @default(OPEN)
+  metricValue Float
+  startedAt   DateTime @default(now())
+  resolvedAt  DateTime?
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+
+  alertRule   AlertRule @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+
+  @@index([alertRuleId, status])
+  @@index([startedAt])
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum ApiPermission {
+  EVENTS_WRITE
+  EVENTS_READ
+  DASHBOARDS_READ
+  DASHBOARDS_WRITE
+  ALERTS_MANAGE
+  ADMIN
+}
+
+enum WidgetType {
+  LINE_CHART
+  BAR_CHART
+  PIE_CHART
+  TABLE
+  METRIC
+  FUNNEL
+  RETENTION
+  HEATMAP
+}
+
+enum ResultType {
+  TIME_SERIES
+  TABLE
+  SCALAR
+  DISTRIBUTION
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+  CHANGE_PERCENT
+  ANOMALY
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}

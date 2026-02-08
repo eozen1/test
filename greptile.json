@@ -1,8 +1,13 @@
 {
   "includeAuthors": [],
   "excludeAuthors": [
-    "github-actions"
+    "github-actions",
+    "dependabot[bot]"
   ],
-  "disabledLabels": ["bug"],
-  "triggerOnUpdates": false
+  "disabledLabels": ["bug", "wontfix"],
+  "triggerOnUpdates": false,
+  "ignorePaths": [
+    "*.lock",
+    "dist/**"
+  ]
 }

@@ -7,10 +7,30 @@ hello();
 // classes, functions, enums, interfaces, methods, structs
 
 class Person {
+    name: string;
+    age: number;
+    email: string;
 
+    constructor(name: string, age: number, email: string) {
+        this.name = name;
+        this.age = age;
+        this.email = email;
+    }
+
+    getDisplayName(): string {
+        return `${this.name} (${this.age})`;
+    }
+
+    toJSON(): Record<string, unknown> {
+        return {
+            name: this.name,
+            age: this.age,
+            email: this.email
+        };
+    }
 }
 
-const person = new Person();
+const person = new Person('Todd', 27, 'todd@example.com');
 
 function add(a: number, b: number): number {
     return a + b;

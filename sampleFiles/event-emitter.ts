@@ -75,6 +75,19 @@ class EventEmitter {
     this.handlers.clear()
     this.onceHandlers.clear()
   }
+
+  waitFor<T>(event: string, timeoutMs: number = 5000): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Timeout waiting for event: ${event}`))
+      }, timeoutMs)
+
+      this.once<T>(event, (data) => {
+        clearTimeout(timer)
+        resolve(data)
+      })
+    })
+  }
 }
 
 export { EventEmitter, EventHandler, EventSubscription }

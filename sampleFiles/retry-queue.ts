@@ -32,7 +32,7 @@ class RetryQueue<T> {
     this.options = { ...DEFAULT_OPTIONS, ...options }
   }
 
-  enqueue(id: string, payload: T): void {
+  enqueue(id: string, payload: T, priority: number = 0): void {
     if (this.queue.has(id)) return
 
     this.queue.set(id, {
@@ -40,8 +40,12 @@ class RetryQueue<T> {
       payload,
       attempts: 0,
       lastAttempt: null,
-      nextAttempt: Date.now(),
+      nextAttempt: Date.now() - priority,
     })
+  }
+
+  remove(id: string): boolean {
+    return this.queue.delete(id)
   }
 
   async processNext(): Promise<boolean> {

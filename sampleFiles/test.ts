@@ -20,7 +20,7 @@ class Person {
     }
 }
 
-const person = new Person();
+const person = new Person('John', 30);
 
 function add(a: number, b: number): number {
     return a + b;

@@ -80,13 +80,21 @@ class RetryQueue<T> {
     }
   }
 
-  async drain(): Promise<{ succeeded: number; failed: number }> {
+  async drain(onProgress?: (completed: number, remaining: number) => void): Promise<{ succeeded: number; failed: number }> {
     let succeeded = 0
     let failed = 0
+    const initialSize = this.queue.size
 
     while (this.queue.size > 0) {
+      const sizeBefore = this.queue.size
       const processed = await this.processNext()
-      if (!processed) {
+
+      if (processed && this.queue.size < sizeBefore) {
+        succeeded++
+        onProgress?.(succeeded + failed, this.queue.size)
+      } else if (processed) {
+        // Item was retried but still in queue
+      } else {
         const nextTime = Math.min(...Array.from(this.queue.values()).map(i => i.nextAttempt))
         const waitMs = nextTime - Date.now()
         if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs))
@@ -94,6 +102,10 @@ class RetryQueue<T> {
     }
 
     return { succeeded, failed }
+  }
+
+  getItem(id: string): QueueItem<T> | undefined {
+    return this.queue.get(id)
   }
 
   get size(): number {

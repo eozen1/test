@@ -4,7 +4,7 @@
     "github-actions"
   ],
   "disabledLabels": ["bug"],
-  "triggerOnUpdates": false,
+  "triggerOnUpdates": true,
   "fixWithAI": true,
   "fixInIDE": "cursor"
 }

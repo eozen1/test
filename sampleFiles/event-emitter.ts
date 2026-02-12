@@ -32,17 +32,32 @@ class EventEmitter {
     const handlers = this.handlers.get(event)
     if (handlers) {
       for (const handler of handlers) {
-        handler(data)
+        try {
+          handler(data)
+        } catch (err) {
+          this.emit('error', { event, error: err })
+        }
       }
     }
 
     const onceHandlers = this.onceHandlers.get(event)
     if (onceHandlers) {
       for (const handler of onceHandlers) {
-        handler(data)
+        try {
+          handler(data)
+        } catch (err) {
+          this.emit('error', { event, error: err })
+        }
       }
       this.onceHandlers.delete(event)
     }
+  }
+
+  eventNames(): string[] {
+    const names = new Set<string>()
+    for (const key of this.handlers.keys()) names.add(key)
+    for (const key of this.onceHandlers.keys()) names.add(key)
+    return Array.from(names)
   }
 
   off(event: string): void {

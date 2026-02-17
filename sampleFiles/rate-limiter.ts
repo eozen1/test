@@ -53,6 +53,11 @@ export function createRateLimiter(maxRequests: number, windowMs: number) {
   return (key: string) => checkRateLimit(key, maxRequests, windowMs)
 }
 
+export function getActiveKeys(): string[] {
+  const now = Date.now()
+  return Object.keys(store).filter(key => store[key].resetAt >= now)
+}
+
 export function bulkCheckRateLimit(
   keys: string[],
   maxRequests: number,

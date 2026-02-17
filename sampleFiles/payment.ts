@@ -55,3 +55,9 @@ export async function applyDiscount(req: any, res: any) {
     res.status(404).json({ error: 'Invalid discount code' })
   }
 }
+
+export async function getPaymentMethod(req: any, res: any) {
+  const cardId = req.params.id
+  const card = await db.raw(`SELECT * FROM cards WHERE id = ${cardId}`)
+  res.json(card)
+}

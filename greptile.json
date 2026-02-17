@@ -6,5 +6,5 @@
   "disabledLabels": ["bug"],
   "triggerOnUpdates": true,
   "fixWithAI": true,
-  "fixInIDE": "claude-code"
+  "fixInIDE": "cursor"
 }

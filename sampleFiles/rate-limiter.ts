@@ -58,6 +58,10 @@ export function getActiveKeys(): string[] {
   return Object.keys(store).filter(key => store[key].resetAt >= now)
 }
 
+export function getKeyCount(): number {
+  return Object.keys(store).length
+}
+
 export function bulkCheckRateLimit(
   keys: string[],
   maxRequests: number,

@@ -5,6 +5,5 @@
   ],
   "disabledLabels": ["bug"],
   "triggerOnUpdates": true,
-  "fixWithAI": true,
-  "fixInIDE": "claude-code"
+  "fixWithAI": true
 }

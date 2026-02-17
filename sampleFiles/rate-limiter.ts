@@ -62,6 +62,18 @@ export function getKeyCount(): number {
   return Object.keys(store).length
 }
 
+export function clearExpired(): number {
+  const now = Date.now()
+  let cleared = 0
+  for (const key in store) {
+    if (store[key].resetAt < now) {
+      delete store[key]
+      cleared++
+    }
+  }
+  return cleared
+}
+
 export function bulkCheckRateLimit(
   keys: string[],
   maxRequests: number,

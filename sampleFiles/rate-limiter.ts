@@ -86,3 +86,9 @@ export function bulkCheckRateLimit(
   }
   return results
 }
+
+export function getRateLimitInfo(key: string): { isLimited: boolean; count: number } {
+  const entry = store[key]
+  if (!entry) return { isLimited: false, count: 0 }
+  return { isLimited: entry.count > 0, count: entry.count }
+}

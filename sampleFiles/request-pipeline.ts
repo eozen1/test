@@ -84,6 +84,55 @@ function authMiddleware(tokenProvider: () => string): Middleware<PipelineContext
   }
 }
 
+// Built-in middleware: cache responses by URL
+function cacheMiddleware(ttlMs: number = 60_000): Middleware<PipelineContext> {
+  const cache = new Map<string, { data: unknown; status: number; expiry: number }>()
+
+  return async (ctx, next) => {
+    if (ctx.method !== 'GET') {
+      await next()
+      return
+    }
+
+    const cached = cache.get(ctx.url)
+    if (cached && cached.expiry > Date.now()) {
+      ctx.response = { status: cached.status, data: cached.data }
+      return
+    }
+
+    await next()
+
+    if (ctx.response && ctx.response.status >= 200 && ctx.response.status < 300) {
+      cache.set(ctx.url, {
+        data: ctx.response.data,
+        status: ctx.response.status,
+        expiry: Date.now() + ttlMs,
+      })
+    }
+  }
+}
+
+// Built-in middleware: rate limiting
+function rateLimitMiddleware(maxPerSecond: number): Middleware<PipelineContext> {
+  const timestamps: number[] = []
+
+  return async (ctx, next) => {
+    const now = Date.now()
+    const windowStart = now - 1000
+    while (timestamps.length > 0 && timestamps[0] < windowStart) {
+      timestamps.shift()
+    }
+
+    if (timestamps.length >= maxPerSecond) {
+      const waitTime = timestamps[0] + 1000 - now
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+    }
+
+    timestamps.push(Date.now())
+    await next()
+  }
+}
+
 export {
   RequestPipeline,
   PipelineContext,
@@ -92,4 +141,6 @@ export {
   retryMiddleware,
   timeoutMiddleware,
   authMiddleware,
+  cacheMiddleware,
+  rateLimitMiddleware,
 }

@@ -44,3 +44,41 @@ impl Printable for Color {
 fn add(a: i32, b: i32) -> i32 {
     a + b
 }
+
+struct TaskQueue<T> {
+    items: Vec<T>,
+    capacity: usize,
+}
+
+impl<T> TaskQueue<T> {
+    fn new(capacity: usize) -> Self {
+        Self {
+            items: Vec::with_capacity(capacity),
+            capacity,
+        }
+    }
+
+    fn push(&mut self, item: T) -> Result<(), &str> {
+        if self.items.len() >= self.capacity {
+            return Err("Queue is full");
+        }
+        self.items.push(item);
+        Ok(())
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        if self.items.is_empty() {
+            None
+        } else {
+            Some(self.items.remove(0))
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+}

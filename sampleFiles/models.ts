@@ -2,15 +2,19 @@ interface UserProfile {
   id: string;
   email: string;
   displayName: string;
+  avatarUrl?: string;
   createdAt: Date;
   lastLogin?: Date;
+  deactivatedAt?: Date;
 }
 
 interface Workspace {
   id: string;
   name: string;
+  description?: string;
   ownerId: string;
   members: WorkspaceMember[];
+  archivedAt?: Date;
 }
 
 interface WorkspaceMember {
@@ -46,6 +50,16 @@ class UserService {
 
   async deleteUser(id: string): Promise<boolean> {
     return this.users.delete(id);
+  }
+
+  async deactivateUser(id: string): Promise<void> {
+    const user = this.users.get(id);
+    if (!user) throw new Error('User not found');
+    user.deactivatedAt = new Date();
+  }
+
+  async listActiveUsers(): Promise<UserProfile[]> {
+    return Array.from(this.users.values()).filter(u => !u.deactivatedAt);
   }
 }
 
@@ -88,9 +102,15 @@ class WorkspaceService {
     workspace.members = workspace.members.filter(m => m.userId !== userId);
   }
 
-  async getWorkspacesForUser(userId: string): Promise<Workspace[]> {
+  async archiveWorkspace(workspaceId: string): Promise<void> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) throw new Error('Workspace not found');
+    workspace.archivedAt = new Date();
+  }
+
+  async getWorkspacesForUser(userId: string, includeArchived = false): Promise<Workspace[]> {
     return Array.from(this.workspaces.values()).filter(
-      ws => ws.members.some(m => m.userId === userId)
+      ws => ws.members.some(m => m.userId === userId) && (includeArchived || !ws.archivedAt)
     );
   }
 }

@@ -81,4 +81,12 @@ impl<T> TaskQueue<T> {
     fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
+
+    fn peek(&self) -> Option<&T> {
+        self.items.first()
+    }
+
+    fn drain(&mut self) -> Vec<T> {
+        std::mem::take(&mut self.items)
+    }
 }

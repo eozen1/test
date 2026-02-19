@@ -66,4 +66,27 @@ class EventBus {
   }
 }
 
-export { EventBus, EventHandler, Subscription }
+// Typed event map for compile-time safety
+type EventMap = Record<string, unknown>
+
+class TypedEventBus<E extends EventMap> {
+  private bus = new EventBus()
+
+  on<K extends keyof E & string>(event: K, handler: EventHandler<E[K]>): Subscription {
+    return this.bus.on(event, handler as EventHandler)
+  }
+
+  once<K extends keyof E & string>(event: K, handler: EventHandler<E[K]>): Subscription {
+    return this.bus.once(event, handler as EventHandler)
+  }
+
+  async emit<K extends keyof E & string>(event: K, payload: E[K]): Promise<void> {
+    return this.bus.emit(event, payload)
+  }
+
+  removeAllListeners<K extends keyof E & string>(event?: K): void {
+    this.bus.removeAllListeners(event)
+  }
+}
+
+export { EventBus, TypedEventBus, EventHandler, EventMap, Subscription }

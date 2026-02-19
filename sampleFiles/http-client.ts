@@ -27,6 +27,7 @@ class HttpError extends Error {
 class HttpClient {
   private baseUrl: string;
   private defaultHeaders: Record<string, string>;
+  private interceptors: Array<(options: RequestOptions) => RequestOptions> = [];
 
   constructor(baseUrl: string, defaultHeaders: Record<string, string> = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
@@ -36,10 +37,19 @@ class HttpClient {
     };
   }
 
+  addInterceptor(fn: (options: RequestOptions) => RequestOptions): void {
+    this.interceptors.push(fn);
+  }
+
   async request<T>(method: HttpMethod, path: string, options: RequestOptions = {}): Promise<HttpResponse<T>> {
     const url = `${this.baseUrl}${path}`;
-    const headers = { ...this.defaultHeaders, ...options.headers };
-    const retries = options.retries ?? 0;
+    let resolvedOptions = { ...options };
+    for (const interceptor of this.interceptors) {
+      resolvedOptions = interceptor(resolvedOptions);
+    }
+
+    const headers = { ...this.defaultHeaders, ...resolvedOptions.headers };
+    const retries = resolvedOptions.retries ?? 0;
 
     let lastError: Error | null = null;
 
@@ -53,7 +63,7 @@ class HttpClient {
         const response = await fetch(url, {
           method,
           headers,
-          body: options.body ? JSON.stringify(options.body) : undefined,
+          body: resolvedOptions.body ? JSON.stringify(resolvedOptions.body) : undefined,
           signal: controller.signal,
         });
 

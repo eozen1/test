@@ -100,3 +100,37 @@ cache = LRUCache(max_size=256, default_ttl=300)
 def expensive_computation(n):
     time.sleep(0.1)  # simulate work
     return sum(i * i for i in range(n))
+
+
+class WriteBackCache(LRUCache):
+    """Cache that batches writes and flushes them periodically."""
+
+    def __init__(self, max_size=128, default_ttl=None, flush_interval=10):
+        super().__init__(max_size, default_ttl)
+        self._dirty_keys = set()
+        self._flush_callbacks = []
+        self._flush_interval = flush_interval
+
+    def set(self, key, value, ttl=None):
+        super().set(key, value, ttl)
+        self._dirty_keys.add(key)
+
+    def on_flush(self, callback):
+        self._flush_callbacks.append(callback)
+
+    def flush(self):
+        dirty = {}
+        with self._lock:
+            for key in list(self._dirty_keys):
+                if key in self._cache:
+                    value, _ = self._cache[key]
+                    dirty[key] = value
+            self._dirty_keys.clear()
+
+        for callback in self._flush_callbacks:
+            callback(dirty)
+
+        return len(dirty)
+
+    def get_dirty_count(self):
+        return len(self._dirty_keys)

@@ -116,4 +116,81 @@ const trafficLight = new StateMachine<TrafficState, TrafficEvent>({
   },
 })
 
-export { StateMachine, StateConfig, StateTransition }
+// Parallel state machine — runs multiple sub-machines concurrently
+class ParallelStateMachine<S extends string, E extends string> {
+  private machines: Map<string, StateMachine<S, E>> = new Map()
+
+  addRegion(name: string, config: StateConfig<S, E>): void {
+    this.machines.set(name, new StateMachine(config))
+  }
+
+  send(event: E): Map<string, boolean> {
+    const results = new Map<string, boolean>()
+    for (const [name, machine] of this.machines) {
+      results.set(name, machine.send(event))
+    }
+    return results
+  }
+
+  getStates(): Map<string, S> {
+    const states = new Map<string, S>()
+    for (const [name, machine] of this.machines) {
+      states.set(name, machine.state)
+    }
+    return states
+  }
+
+  getRegion(name: string): StateMachine<S, E> | undefined {
+    return this.machines.get(name)
+  }
+
+  reset(): void {
+    for (const machine of this.machines.values()) {
+      machine.reset()
+    }
+  }
+}
+
+// State machine with context — carries mutable data through transitions
+type ContextTransition<S extends string, E extends string, C> = {
+  from: S
+  to: S
+  event: E
+  guard?: (ctx: C) => boolean
+  action?: (ctx: C) => void
+}
+
+class ContextStateMachine<S extends string, E extends string, C extends object> {
+  private current: S
+  private context: C
+  private transitions: ContextTransition<S, E, C>[]
+
+  constructor(initial: S, context: C, transitions: ContextTransition<S, E, C>[]) {
+    this.current = initial
+    this.context = context
+    this.transitions = transitions
+  }
+
+  get state(): S {
+    return this.current
+  }
+
+  getContext(): Readonly<C> {
+    return this.context
+  }
+
+  send(event: E): boolean {
+    const transition = this.transitions.find(
+      t => t.from === this.current && t.event === event
+    )
+
+    if (!transition) return false
+    if (transition.guard && !transition.guard(this.context)) return false
+
+    transition.action?.(this.context)
+    this.current = transition.to
+    return true
+  }
+}
+
+export { StateMachine, StateConfig, StateTransition, ParallelStateMachine, ContextStateMachine }

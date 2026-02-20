@@ -17,8 +17,9 @@ func main() {
 // class
 
 type Person struct {
-	name string
-	age  int
+	Name  string
+	Age   int
+	Email string
 }
 
 // function
@@ -45,13 +46,13 @@ type Shape interface {
 
 // method
 
-func (p Person) sayHello() {
-	fmt.Println("Hello")
+func (p Person) SayHello() {
+	fmt.Printf("Hello, I'm %s\n", p.Name)
 }
 
 // struct
 
 type Rectangle struct {
-	width  float64
-	height float64
+	Width  float64
+	Height float64
 }

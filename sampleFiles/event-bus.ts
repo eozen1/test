@@ -89,4 +89,19 @@ class TypedEventBus<E extends EventMap> {
   }
 }
 
-export { EventBus, TypedEventBus, EventHandler, EventMap, Subscription }
+// Debounced event emission — collapses rapid-fire events into one
+function debounceHandler<T>(handler: EventHandler<T>, delayMs: number): EventHandler<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  let latestPayload: T
+
+  return (payload: T) => {
+    latestPayload = payload
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      handler(latestPayload)
+      timeout = null
+    }, delayMs)
+  }
+}
+
+export { EventBus, TypedEventBus, EventHandler, EventMap, Subscription, debounceHandler }

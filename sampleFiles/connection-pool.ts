@@ -167,4 +167,24 @@ class ConnectionPool<T> {
   }
 }
 
-export { ConnectionPool, PoolOptions, ResourceFactory, PooledResource }
+class HealthCheckPool<T> extends ConnectionPool<T> {
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null
+
+  startHealthChecks(intervalMs: number = 30000): void {
+    this.healthCheckInterval = setInterval(async () => {
+      const evicted = await this.evictIdle()
+      if (evicted > 0) {
+        console.log(`Health check: evicted ${evicted} idle connections`)
+      }
+    }, intervalMs)
+  }
+
+  stopHealthChecks(): void {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval)
+      this.healthCheckInterval = null
+    }
+  }
+}
+
+export { ConnectionPool, HealthCheckPool, PoolOptions, ResourceFactory, PooledResource }

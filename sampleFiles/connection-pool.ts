@@ -132,7 +132,28 @@ class ConnectionPool<T> {
       inUse: this.inUse.size,
       waiting: this.waitQueue.length,
       total: this.totalSize,
+      oldestResource: this.available.length > 0
+        ? Date.now() - Math.min(...this.available.map(p => p.createdAt))
+        : null,
+      averageUseCount: this.totalSize > 0
+        ? [...this.available, ...this.inUse].reduce((sum, p) => sum + p.useCount, 0) / this.totalSize
+        : 0,
     }
+  }
+
+  async evictIdle(): Promise<number> {
+    const now = Date.now()
+    const toEvict = this.available.filter(
+      p => now - p.lastUsedAt > this.options.idleTimeout
+    )
+
+    for (const pooled of toEvict) {
+      await this.factory.destroy(pooled.resource)
+      const idx = this.available.indexOf(pooled)
+      if (idx >= 0) this.available.splice(idx, 1)
+    }
+
+    return toEvict.length
   }
 
   private async createResource(): Promise<PooledResource<T>> {

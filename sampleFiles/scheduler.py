@@ -104,3 +104,27 @@ class TaskScheduler:
                 task.cancelled = True
             self._tasks.clear()
             self._queue.clear()
+
+    def reschedule(self, task_id, new_delay):
+        with self._lock:
+            if task_id not in self._tasks:
+                return False
+            old_task = self._tasks[task_id]
+            old_task.cancelled = True
+
+            new_task = ScheduledTask(
+                run_at=time.time() + new_delay,
+                task_id=task_id,
+                callback=old_task.callback,
+                interval=old_task.interval,
+            )
+            heapq.heappush(self._queue, new_task)
+            self._tasks[task_id] = new_task
+            return True
+
+    def get_next_run_time(self):
+        with self._lock:
+            for task in sorted(self._queue):
+                if not task.cancelled:
+                    return task.run_at - time.time()
+            return None

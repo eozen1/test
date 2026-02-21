@@ -72,7 +72,15 @@ type Shape interface {
 // method
 
 func (p Person) sayHello() {
-	fmt.Println("Hello")
+	fmt.Printf("Hello, I'm %s (%d)\n", p.name, p.age)
+}
+
+func (p Person) String() string {
+	return fmt.Sprintf("%s <%s>, age %d, %s %s %s", p.name, p.email, p.age, p.address.street, p.address.city, p.address.state)
+}
+
+func (a Address) IsEmpty() bool {
+	return a.street == "" && a.city == "" && a.state == "" && a.zip == ""
 }
 
 // struct

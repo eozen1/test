@@ -109,3 +109,27 @@ func (c Circle) area() float64 {
 func (c Circle) perimeter() float64 {
 	return 2 * 3.14159 * c.radius
 }
+
+type Triangle struct {
+	base   float64
+	height float64
+	sideA  float64
+	sideB  float64
+	sideC  float64
+}
+
+func (t Triangle) area() float64 {
+	return 0.5 * t.base * t.height
+}
+
+func (t Triangle) perimeter() float64 {
+	return t.sideA + t.sideB + t.sideC
+}
+
+func totalArea(shapes ...Shape) float64 {
+	var total float64
+	for _, s := range shapes {
+		total += s.area()
+	}
+	return total
+}

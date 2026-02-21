@@ -106,6 +106,23 @@ class CSVProcessor:
         return self
 
 
+    def to_dicts(self) -> List[Dict[str, str]]:
+        return [row.copy() for row in self._data]
+
+    def sample(self, n: int = 5) -> List[Dict[str, str]]:
+        import random
+        if n >= len(self._data):
+            return self.to_dicts()
+        return [row.copy() for row in random.sample(self._data, n)]
+
+    def drop_column(self, column: str) -> 'CSVProcessor':
+        if column in self._headers:
+            self._headers.remove(column)
+        for row in self._data:
+            row.pop(column, None)
+        return self
+
+
 def batch_process(directory: str, config: Optional[CSVConfig] = None) -> Dict[str, int]:
     results = {}
     for filename in os.listdir(directory):

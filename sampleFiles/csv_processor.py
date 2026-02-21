@@ -85,6 +85,27 @@ class CSVProcessor:
         return merged
 
 
+    def deduplicate(self, column: str) -> 'CSVProcessor':
+        seen = set()
+        unique = []
+        for row in self._data:
+            key = row.get(column, '')
+            if key not in seen:
+                seen.add(key)
+                unique.append(row)
+        self._data = unique
+        return self
+
+    def rename_column(self, old_name: str, new_name: str) -> 'CSVProcessor':
+        if old_name in self._headers:
+            idx = self._headers.index(old_name)
+            self._headers[idx] = new_name
+        for row in self._data:
+            if old_name in row:
+                row[new_name] = row.pop(old_name)
+        return self
+
+
 def batch_process(directory: str, config: Optional[CSVConfig] = None) -> Dict[str, int]:
     results = {}
     for filename in os.listdir(directory):

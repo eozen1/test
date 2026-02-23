@@ -133,3 +133,25 @@ func (s *Scheduler) PendingCount() int {
 	defer s.mu.Unlock()
 	return len(s.tasks)
 }
+
+func (s *Scheduler) ListTasks() []Task {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result := make([]Task, len(s.tasks))
+	for i, t := range s.tasks {
+		result[i] = Task{
+			ID:       t.ID,
+			Name:     t.Name,
+			Priority: t.Priority,
+			RunAt:    t.RunAt,
+		}
+	}
+	return result
+}
+
+func (s *Scheduler) IsRunning() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.running
+}

@@ -52,3 +52,11 @@ func (wp *WorkerPool) worker(id int) {
 		wp.results <- err
 	}
 }
+
+func (wp *WorkerPool) PendingJobs() int {
+	return len(wp.jobs)
+}
+
+func (wp *WorkerPool) PoolSize() int {
+	return wp.size
+}

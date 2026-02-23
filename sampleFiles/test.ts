@@ -29,11 +29,13 @@ const color = Color.Red;
 interface Person {
     name: string;
     age: number;
+    email?: string;
 }
 
 const person2: Person = {
     name: 'Todd',
-    age: 27
+    age: 27,
+    email: 'todd@example.com'
 }
 
 const func_add = (a: number, b: number): number => {

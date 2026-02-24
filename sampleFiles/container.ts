@@ -11,6 +11,8 @@ interface Binding<T> {
 export class Container {
   private bindings = new Map<string | symbol, Binding<any>>();
   private resolving = new Set<string | symbol>();
+  private parent?: Container;
+  private children = new Set<Container>();
 
   bind<T>(token: string | symbol, factory: Factory<T>): BindingBuilder<T> {
     const binding: Binding<T> = { factory, singleton: false, tags: [] };
@@ -24,9 +26,29 @@ export class Container {
     return new BindingBuilder(binding);
   }
 
+  createScope(): Container {
+    const child = new Container();
+    child.parent = this;
+    this.children.add(child);
+    return child;
+  }
+
+  disposeScope(): void {
+    if (this.parent) {
+      this.parent.children.delete(this);
+    }
+    for (const child of this.children) {
+      child.disposeScope();
+    }
+    this.reset();
+  }
+
   get<T>(token: string | symbol): T {
     const binding = this.bindings.get(token);
     if (!binding) {
+      if (this.parent) {
+        return this.parent.get<T>(token);
+      }
       throw new ResolutionError(`No binding found for token: ${String(token)}`);
     }
 
@@ -57,6 +79,9 @@ export class Container {
   async getAsync<T>(token: string | symbol): Promise<T> {
     const binding = this.bindings.get(token);
     if (!binding) {
+      if (this.parent) {
+        return this.parent.getAsync<T>(token);
+      }
       throw new ResolutionError(`No binding found for token: ${String(token)}`);
     }
 
@@ -85,7 +110,7 @@ export class Container {
   }
 
   has(token: string | symbol): boolean {
-    return this.bindings.has(token);
+    return this.bindings.has(token) || (this.parent?.has(token) ?? false);
   }
 
   getByTag<T>(tag: string): T[] {

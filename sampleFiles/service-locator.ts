@@ -1,4 +1,5 @@
 import { Container, createToken } from './container';
+import { EventBus, EVENT_BUS, registerEventBus } from './event-bus';
 
 // Service interfaces
 interface Logger {
@@ -127,6 +128,7 @@ export function createDefaultContainer(config: {
   logPrefix?: string;
   apiBaseUrl?: string;
   apiHeaders?: Record<string, string>;
+  maxEventHistory?: number;
 }): Container {
   const container = new Container();
 
@@ -148,5 +150,20 @@ export function createDefaultContainer(config: {
     .asSingleton()
     .tagged('core', 'network');
 
+  registerEventBus(container, { maxHistorySize: config.maxEventHistory });
+
   return container;
+}
+
+// Create a request-scoped container that inherits from the root
+export function createRequestScope(root: Container): Container {
+  const scope = root.createScope();
+
+  // Each request gets its own cache instance for request-level caching
+  scope
+    .bind(CACHE, () => new InMemoryCache())
+    .asSingleton()
+    .tagged('scope', 'storage');
+
+  return scope;
 }

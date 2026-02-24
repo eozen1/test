@@ -13,6 +13,7 @@ export class CircuitBreaker<T> {
   private successCount = 0;
   private lastFailureTime = 0;
   private halfOpenCalls = 0;
+  private readonly createdAt = Date.now();
 
   constructor(
     private fn: (...args: any[]) => Promise<T>,
@@ -92,12 +93,21 @@ export class CircuitBreaker<T> {
     this.transitionTo('closed');
   }
 
-  getStats(): { failures: number; successes: number; state: CircuitState } {
+  getStats(): { failures: number; successes: number; state: CircuitState; uptime: number } {
     return {
       failures: this.failureCount,
       successes: this.successCount,
       state: this.state,
+      uptime: Date.now() - this.createdAt,
     };
+  }
+
+  isOpen(): boolean {
+    return this.state === 'open';
+  }
+
+  isClosed(): boolean {
+    return this.state === 'closed';
   }
 }
 

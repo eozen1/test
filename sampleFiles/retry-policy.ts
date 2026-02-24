@@ -107,6 +107,11 @@ export function isTransientError(error: Error): boolean {
   if (message.includes('rate limit')) return true;
   if (message.includes('service unavailable')) return true;
   if (message.includes('gateway timeout')) return true;
+  if (message.includes('too many requests')) return true;
 
   return false;
+}
+
+export function isHttpRetryable(statusCode: number): boolean {
+  return statusCode === 429 || statusCode === 502 || statusCode === 503 || statusCode === 504;
 }

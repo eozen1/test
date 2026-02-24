@@ -1,5 +1,6 @@
 import { Container, createToken } from './container';
 import { EventBus, EVENT_BUS, registerEventBus } from './event-bus';
+import { LifecycleManager, LIFECYCLE_MANAGER } from './middleware';
 
 // Service interfaces
 interface Logger {
@@ -152,7 +153,27 @@ export function createDefaultContainer(config: {
 
   registerEventBus(container, { maxHistorySize: config.maxEventHistory });
 
+  container
+    .bind(LIFECYCLE_MANAGER, () => new LifecycleManager())
+    .asSingleton()
+    .tagged('core', 'lifecycle');
+
   return container;
+}
+
+// Graceful shutdown helper
+export async function shutdownContainer(container: Container): Promise<void> {
+  if (container.has(LIFECYCLE_MANAGER)) {
+    const lifecycle = container.get<LifecycleManager>(LIFECYCLE_MANAGER);
+    const result = await lifecycle.disposeAll();
+    if (result.failed > 0) {
+      const logger = container.has(LOGGER) ? container.get<Logger>(LOGGER) : null;
+      for (const error of result.errors) {
+        logger?.error('Disposal error during shutdown', error);
+      }
+    }
+  }
+  container.reset();
 }
 
 // Create a request-scoped container that inherits from the root

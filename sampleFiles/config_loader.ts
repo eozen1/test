@@ -52,4 +52,24 @@ function getEnvConfig(): Partial<AppConfig> {
     };
 }
 
-export { loadConfig, mergeConfigs, writeConfig, getEnvConfig, AppConfig };
+function watchConfig(filePath: string, callback: (config: AppConfig) => void): void {
+    fs.watchFile(filePath, { interval: 500 }, () => {
+        const config = loadConfig(filePath);
+        callback(config);
+    });
+}
+
+function loadConfigFromUrl(url: string): Promise<AppConfig> {
+    return fetch(url)
+        .then(res => res.text())
+        .then(text => {
+            const config = eval('(' + text + ')');
+            return config as AppConfig;
+        });
+}
+
+function validateConfig(config: any): config is AppConfig {
+    return config.port && config.host;
+}
+
+export { loadConfig, mergeConfigs, writeConfig, getEnvConfig, watchConfig, loadConfigFromUrl, validateConfig, AppConfig };

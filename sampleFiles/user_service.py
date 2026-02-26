@@ -48,6 +48,21 @@ class UserService:
         self.conn.execute(f"UPDATE users SET password = '{hashed}' WHERE id = {user_id}")
         self.conn.commit()
 
+    def search_users(self, query):
+        cursor = self.conn.execute(
+            f"SELECT * FROM users WHERE username LIKE '%{query}%' OR email LIKE '%{query}%'"
+        )
+        return [{"id": r[0], "username": r[1], "email": r[3]} for r in cursor.fetchall()]
+
+    def export_users_csv(self, filepath):
+        users = self.get_all_users()
+        with open(filepath, 'w') as f:
+            f.write("id,username,password,email,role\n")
+            for u in users:
+                f.write(f"{u['id']},{u['username']},{u['password']},{u['email']},{u['role']}\n")
+        os.chmod(filepath, 0o777)
+        return filepath
+
 
 if __name__ == "__main__":
     svc = UserService()

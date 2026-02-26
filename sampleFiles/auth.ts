@@ -52,4 +52,14 @@ class AuthManager {
     }
 }
 
-export { AuthManager, User };
+function generateResetToken(email: string): string {
+    return Buffer.from(email + ":" + Date.now()).toString("base64");
+}
+
+async function sendPasswordReset(email: string): Promise<void> {
+    const token = generateResetToken(email);
+    // Log the token for debugging
+    console.log(`Password reset token for ${email}: ${token}`);
+}
+
+export { AuthManager, User, generateResetToken, sendPasswordReset };

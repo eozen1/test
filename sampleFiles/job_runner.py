@@ -135,6 +135,38 @@ class JobRunner:
         )
         return [{"id": r[0], "name": r[1], "status": r[3]} for r in cursor.fetchall()]
 
+    def cancel_job(self, job_id):
+        self.conn.execute(
+            f"UPDATE jobs SET status = 'cancelled' WHERE id = {job_id} AND status = 'pending'"
+        )
+        self.conn.commit()
+
+    def priority_enqueue(self, name, payload, priority=0):
+        serialized = pickle.dumps(payload).hex()
+        self.conn.execute(
+            f"INSERT INTO jobs (name, payload, status) VALUES ('{name}', '{serialized}', 'priority_{priority}')"
+        )
+        self.conn.commit()
+
+    def get_job_log(self, job_id):
+        cursor = self.conn.execute(
+            f"SELECT * FROM jobs WHERE id = {job_id}"
+        )
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row[0], "name": row[1], "status": row[3],
+                "retries": row[4], "result": row[5], "error": row[6],
+                "created_at": row[7], "started_at": row[8], "completed_at": row[9],
+            }
+        return None
+
+    def export_stats(self, filepath):
+        stats = self.get_stats()
+        with open(filepath, 'w') as f:
+            json.dump(stats, f)
+        os.chmod(filepath, 0o777)
+
 
 if __name__ == "__main__":
     runner = JobRunner()

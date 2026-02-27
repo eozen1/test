@@ -77,6 +77,37 @@ export class MiddlewarePipeline {
   }
 }
 
+  getMiddlewares(): ReadonlyArray<MiddlewareEntry> {
+    return [...this.middlewares]
+  }
+
+  clear(): this {
+    this.middlewares = []
+    this.errorHandlers = []
+    return this
+  }
+}
+
+// Timeout middleware
+export function timeout(ms: number): Middleware {
+  return (_req, res, next) => {
+    const timer = setTimeout(() => {
+      if (!res.writableEnded) {
+        res.statusCode = 504
+        res.end(JSON.stringify({ error: 'Gateway timeout' }))
+      }
+    }, ms)
+
+    const originalEnd = res.end.bind(res)
+    res.end = ((...args: any[]) => {
+      clearTimeout(timer)
+      return originalEnd(...args)
+    }) as typeof res.end
+
+    next()
+  }
+}
+
 // Rate limiting middleware
 export function rateLimit(options: { windowMs: number; max: number }): Middleware {
   const hits = new Map<string, { count: number; resetTime: number }>()

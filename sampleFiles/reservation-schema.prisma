@@ -1,0 +1,172 @@
+// Reservation management schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Guest {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  firstName String
+  lastName  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+  payments     Payment[]
+  reviews      Review[]
+
+  @@index([email])
+  @@map("guests")
+}
+
+model Property {
+  id          String   @id @default(uuid())
+  name        String
+  address     String
+  city        String
+  country     String
+  pricePerNight Decimal @db.Decimal(10, 2)
+  maxGuests   Int
+  status      PropertyStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rooms        Room[]
+  reservations Reservation[]
+  reviews      Review[]
+  amenities    PropertyAmenity[]
+
+  @@index([city, country])
+  @@map("properties")
+}
+
+model Room {
+  id         String   @id @default(uuid())
+  propertyId String
+  roomNumber String
+  roomType   RoomType
+  floor      Int
+  capacity   Int
+  available  Boolean  @default(true)
+
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+
+  @@unique([propertyId, roomNumber])
+  @@map("rooms")
+}
+
+model Reservation {
+  id           String            @id @default(uuid())
+  guestId      String
+  propertyId   String
+  roomId       String?
+  checkIn      DateTime
+  checkOut     DateTime
+  guestCount   Int
+  status       ReservationStatus @default(PENDING)
+  totalAmount  Decimal           @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  cancelledAt  DateTime?
+
+  guest    Guest    @relation(fields: [guestId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  room     Room?    @relation(fields: [roomId], references: [id])
+  payments Payment[]
+
+  @@index([guestId])
+  @@index([propertyId])
+  @@index([checkIn, checkOut])
+  @@map("reservations")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  reservationId String
+  guestId       String
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("USD")
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  transactionId String?       @unique
+  processedAt   DateTime?
+  createdAt     DateTime      @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  guest       Guest       @relation(fields: [guestId], references: [id])
+
+  @@index([reservationId])
+  @@map("payments")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  guestId    String
+  propertyId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  guest    Guest    @relation(fields: [guestId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+
+  @@unique([guestId, propertyId])
+  @@map("reviews")
+}
+
+model PropertyAmenity {
+  id         String @id @default(uuid())
+  propertyId String
+  amenity    String
+  category   String
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, amenity])
+  @@map("property_amenities")
+}
+
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  SUITE
+  PENTHOUSE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}

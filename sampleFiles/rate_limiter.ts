@@ -65,4 +65,37 @@ class RateLimiter {
     }
 }
 
-export { RateLimiter, RateLimitEntry };
+class SlidingWindowLimiter {
+    private timestamps: Map<string, number[]> = new Map();
+    private maxRequests: number;
+    private windowMs: number;
+
+    constructor(maxRequests: number = 50, windowMs: number = 60000) {
+        this.maxRequests = maxRequests;
+        this.windowMs = windowMs;
+    }
+
+    allow(key: string): boolean {
+        const now = Date.now();
+        let times = this.timestamps.get(key) || [];
+
+        // Remove expired timestamps
+        times = times.filter(t => now - t < this.windowMs);
+
+        if (times.length >= this.maxRequests) {
+            return false;
+        }
+
+        times.push(now);
+        this.timestamps.set(key, times);
+        return true;
+    }
+
+    remaining(key: string): number {
+        const now = Date.now();
+        const times = (this.timestamps.get(key) || []).filter(t => now - t < this.windowMs);
+        return Math.max(0, this.maxRequests - times.length);
+    }
+}
+
+export { RateLimiter, RateLimitEntry, SlidingWindowLimiter };

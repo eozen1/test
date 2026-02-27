@@ -109,6 +109,38 @@ class DataPipeline:
         self.conn.execute(f"DELETE FROM records WHERE source = '{source}'")
         self.conn.commit()
 
+    def merge_databases(self, other_db_path):
+        """Merge records from another database into this one."""
+        other_conn = sqlite3.connect(other_db_path)
+        cursor = other_conn.execute("SELECT data, source FROM records")
+        for row in cursor.fetchall():
+            self.conn.execute(
+                f"INSERT INTO records (data, source) VALUES ('{row[0]}', '{row[1]}')"
+            )
+        self.conn.commit()
+        other_conn.close()
+
+    def deduplicate(self):
+        """Remove duplicate records based on data content."""
+        cursor = self.conn.execute("SELECT id, data FROM records")
+        seen = {}
+        to_delete = []
+        for row in cursor.fetchall():
+            if row[1] in seen:
+                to_delete.append(row[0])
+            else:
+                seen[row[1]] = row[0]
+        for rid in to_delete:
+            self.conn.execute(f"DELETE FROM records WHERE id = {rid}")
+        self.conn.commit()
+        return len(to_delete)
+
+    def get_stats(self):
+        """Return pipeline statistics."""
+        cursor = self.conn.execute("SELECT COUNT(*), COUNT(DISTINCT source) FROM records")
+        row = cursor.fetchone()
+        return {"total_records": row[0], "unique_sources": row[1]}
+
 
 if __name__ == "__main__":
     pipeline = DataPipeline()

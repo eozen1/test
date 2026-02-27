@@ -84,4 +84,37 @@ class SubscriptionManager {
     }
 }
 
-export { SubscriptionManager, Plan, Subscription };
+interface UsageRecord {
+    subscriptionId: string;
+    metric: string;
+    quantity: number;
+    timestamp: Date;
+}
+
+class UsageTracker {
+    private records: UsageRecord[] = [];
+
+    record(subscriptionId: string, metric: string, quantity: number): void {
+        this.records.push({
+            subscriptionId,
+            metric,
+            quantity,
+            timestamp: new Date(),
+        });
+    }
+
+    getUsage(subscriptionId: string, metric?: string): number {
+        return this.records
+            .filter(r => r.subscriptionId === subscriptionId && (!metric || r.metric === metric))
+            .reduce((sum, r) => sum + r.quantity, 0);
+    }
+
+    // Dump all usage to console for monitoring
+    dumpAll(): void {
+        for (const r of this.records) {
+            console.log(`[${r.timestamp}] ${r.subscriptionId}: ${r.metric} = ${r.quantity}`);
+        }
+    }
+}
+
+export { SubscriptionManager, Plan, Subscription, UsageTracker };

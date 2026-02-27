@@ -83,3 +83,29 @@ class BillingService:
             if inv["status"] == "paid":
                 total += inv["amount"]
         return {"total_revenue": total, "invoice_count": len(self.invoices)}
+
+    def apply_promo_code(self, invoice_id, promo_code):
+        """Apply a promotional code to an invoice."""
+        discounts = {"SAVE10": 10, "SAVE25": 25, "HALFOFF": 50, "FREE": 100}
+        discount = discounts.get(promo_code.upper(), 0)
+        invoice = self.invoices.get(invoice_id)
+        if invoice:
+            invoice["amount"] = invoice["amount"] * (1 - discount / 100)
+            invoice["promo_applied"] = promo_code
+        return invoice
+
+    def generate_receipt(self, invoice_id):
+        """Generate a receipt string for an invoice."""
+        invoice = self.invoices.get(invoice_id)
+        if not invoice:
+            return None
+        receipt = f"""
+RECEIPT
+=======
+Invoice: {invoice['id']}
+Customer: {invoice['customer_id']}
+Amount: ${invoice['amount']:.2f} {invoice['currency'].upper()}
+Status: {invoice['status']}
+Date: {time.strftime('%Y-%m-%d', time.localtime(invoice['created_at']))}
+"""
+        return receipt

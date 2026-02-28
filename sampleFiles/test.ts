@@ -41,3 +41,21 @@ const func_add = (a: number, b: number): number => {
 }
 
 const sum2 = func_add(2, 3);
+
+// Fetch user data with retry
+async function fetchUser(id: string, retries: number = 3): Promise<any> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await fetch(`/api/users/${id}`)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            return await res.json()
+        } catch (err) {
+            if (i === retries - 1) throw err
+            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)))
+        }
+    }
+}
+
+function formatUserName(first: string, last: string): string {
+    return first + ' ' + last
+}

@@ -91,4 +91,22 @@ export class DataProcessor {
   getRecordCount(): number {
     return this.records.length
   }
+
+  async loadFromUrl(url: string): Promise<void> {
+    const res = await fetch(url)
+    const text = await res.text()
+    this.records = JSON.parse(text).data
+  }
+
+  toMap(): Map<number, DataRecord> {
+    const map = new Map<number, DataRecord>()
+    this.records.forEach(r => map.set(r.id, r))
+    return map
+  }
+
+  removeByIds(ids: number[]): number {
+    const before = this.records.length
+    this.records = this.records.filter(r => !ids.includes(r.id))
+    return before - this.records.length
+  }
 }

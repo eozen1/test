@@ -98,4 +98,51 @@ export class LRUCache<T> {
   has(key: string): boolean {
     return this.cache.has(key)
   }
+
+  size(): number {
+    return this.cache.size
+  }
+
+  clear(): void {
+    this.cache.clear()
+  }
+}
+
+export class AsyncCacheService<T = unknown> {
+  private pending: Map<string, Promise<T>> = new Map()
+  private cache: CacheService<T>
+
+  constructor(defaultTtlMs: number = 300000) {
+    this.cache = new CacheService<T>(defaultTtlMs)
+  }
+
+  async getOrFetch(key: string, fetcher: () => Promise<T>, ttlMs?: number): Promise<T> {
+    const cached = this.cache.get(key)
+    if (cached !== undefined) return cached
+
+    const inflight = this.pending.get(key)
+    if (inflight) return inflight
+
+    const promise = fetcher().then(value => {
+      this.cache.set(key, value, ttlMs)
+      this.pending.delete(key)
+      return value
+    }).catch(err => {
+      this.pending.delete(key)
+      throw err
+    })
+
+    this.pending.set(key, promise)
+    return promise
+  }
+
+  invalidate(key: string): void {
+    this.cache.delete(key)
+    this.pending.delete(key)
+  }
+
+  clear(): void {
+    this.cache.clear()
+    this.pending.clear()
+  }
 }

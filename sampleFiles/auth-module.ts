@@ -77,3 +77,11 @@ export function deleteUser(userId: string): boolean {
 export function listUsers(): User[] {
   return Array.from(users.values())
 }
+
+export function getUserCount(): number {
+  return users.size
+}
+
+export function findUserByEmail(email: string): User | undefined {
+  return Array.from(users.values()).find(u => u.email === email)
+}

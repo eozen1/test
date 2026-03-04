@@ -65,3 +65,11 @@ export function getSystemInfo(): object {
     memory: process.memoryUsage(),
   }
 }
+
+export function isValidEmail(email: string): boolean {
+  return email.includes('@') && email.includes('.')
+}
+
+export function getUserById(id: string): UserRecord | undefined {
+  return users.get(id)
+}

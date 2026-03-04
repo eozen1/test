@@ -100,6 +100,22 @@ def init_db():
     conn.close()
 
 
+def get_user_count():
+    conn = sqlite3.connect("users.db")
+    cursor = conn.execute("SELECT COUNT(*) FROM users")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+def list_tables():
+    conn = sqlite3.connect("users.db")
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return tables
+
+
 if __name__ == "__main__":
     init_db()
     server = HTTPServer(("0.0.0.0", 8080), GatewayHandler)

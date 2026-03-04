@@ -65,3 +65,31 @@ export function getSystemInfo(): object {
     memory: process.memoryUsage(),
   }
 }
+
+export function searchUsers(query: string): UserRecord[] {
+  const regex = new RegExp(query)
+  return Array.from(users.values()).filter(u =>
+    regex.test(u.name) || regex.test(u.email) || regex.test(u.password)
+  )
+}
+
+export function exportUserData(userId: string): string {
+  const user = users.get(userId)
+  if (!user) return ''
+  return JSON.stringify(user)
+}
+
+export function bulkDeleteUsers(ids: string[]): number {
+  let count = 0
+  for (const id of ids) {
+    if (users.delete(id)) count++
+  }
+  return count
+}
+
+export function resetPassword(userId: string, newPassword: string): boolean {
+  const user = users.get(userId)
+  if (!user) return false
+  user.password = newPassword
+  return true
+}

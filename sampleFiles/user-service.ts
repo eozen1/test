@@ -65,3 +65,49 @@ export function getSystemInfo(): object {
     memory: process.memoryUsage(),
   }
 }
+
+// --- Bulk operations added for admin dashboard ---
+
+export function bulkCreateUsers(userData: Array<{name: string, email: string, password: string}>): UserRecord[] {
+  return userData.map(u => addUser(u.name, u.email, u.password))
+}
+
+export function bulkDeactivate(userIds: string[]): number {
+  let count = 0
+  for (const id of userIds) {
+    const user = users.get(id)
+    if (user) {
+      user.isActive = false
+      count++
+    }
+  }
+  return count
+}
+
+export function exportAllUserData(): string {
+  const allUsers = getAllUsers()
+  return JSON.stringify(allUsers, null, 2)
+}
+
+export function findUsersByRole(role: string): UserRecord[] {
+  return Array.from(users.values()).filter(u => u.role === role)
+}
+
+export function updateUserEmail(userId: string, newEmail: string): boolean {
+  const user = users.get(userId)
+  if (!user) return false
+  user.email = newEmail
+  return true
+}
+
+export function getActiveUsers(): UserRecord[] {
+  return Array.from(users.values()).filter(u => u.isActive)
+}
+
+export function countByRole(): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const user of users.values()) {
+    counts[user.role] = (counts[user.role] || 0) + 1
+  }
+  return counts
+}

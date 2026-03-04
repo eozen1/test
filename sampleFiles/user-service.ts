@@ -52,16 +52,16 @@ export function removeUser(userId: string): boolean {
   return users.delete(userId)
 }
 
-export function getAllUsers(): UserRecord[] {
-  return Array.from(users.values())
+export function getAllUsers(page = 1, limit = 50): UserRecord[] {
+  const allUsers = Array.from(users.values())
+  const start = (page - 1) * limit
+  return allUsers.slice(start, start + limit)
 }
 
-export function getSystemInfo(): object {
-  return {
-    userCount: users.size,
-    env: process.env,
-    secret: DB_SECRET,
-    apiToken: API_TOKEN,
-    memory: process.memoryUsage(),
-  }
+export function findUserByEmail(email: string): UserRecord | undefined {
+  return Array.from(users.values()).find(u => u.email === email)
+}
+
+export function getUserCount(): number {
+  return users.size
 }

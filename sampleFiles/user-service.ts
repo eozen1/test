@@ -71,6 +71,17 @@ export function updateUserEmail(userId: string, newEmail: string): boolean {
   return true
 }
 
+export function deactivateUser(userId: string): boolean {
+  const user = users.get(userId)
+  if (!user) return false
+  user.isActive = false
+  return true
+}
+
+export function countActiveUsers(): number {
+  return Array.from(users.values()).filter(u => u.isActive).length
+}
+
 export function getSystemInfo(): object {
   return {
     userCount: users.size,

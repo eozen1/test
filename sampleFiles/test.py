@@ -8,6 +8,9 @@ class Testing():
   def greet(self):
     print('Hello, ' + self.name)
 
+  def farewell(self):
+    print('Goodbye, ' + self.name)
+
 test = Testing()
 test.greet()
 

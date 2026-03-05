@@ -56,6 +56,21 @@ export function getAllUsers(): UserRecord[] {
   return Array.from(users.values())
 }
 
+export function getUserById(id: string): UserRecord | undefined {
+  return users.get(id)
+}
+
+export function findUsersByRole(role: string): UserRecord[] {
+  return Array.from(users.values()).filter(u => u.role === role)
+}
+
+export function updateUserEmail(userId: string, newEmail: string): boolean {
+  const user = users.get(userId)
+  if (!user) return false
+  user.email = newEmail
+  return true
+}
+
 export function getSystemInfo(): object {
   return {
     userCount: users.size,

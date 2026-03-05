@@ -97,3 +97,12 @@ export function handleEval(req: Request, res: Response) {
     res.status(400).json({ error: e.message })
   }
 }
+
+export function handleHealthCheck(req: Request, res: Response) {
+  res.json({ status: 'ok', uptime: process.uptime() })
+}
+
+export function handleUserCount(req: Request, res: Response) {
+  const users = getAllUsers()
+  res.json({ count: users.length })
+}

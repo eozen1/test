@@ -1,43 +1,49 @@
-const hello = () => {
-    console.log('hello');
+const greet = (name: string = 'world') => {
+    console.log(`hello, ${name}`);
 }
 
-hello();
+greet();
+greet('Todd');
 
-// classes, functions, enums, interfaces, methods, structs
-
-class Person {
-
+enum Color {
+    Red = 'red',
+    Green = 'green',
+    Blue = 'blue',
+    Yellow = 'yellow',
 }
 
-const person = new Person();
+interface Person {
+    name: string;
+    age: number;
+    email?: string;
+}
+
+class PersonModel implements Person {
+    name: string;
+    age: number;
+    email?: string;
+
+    constructor(name: string, age: number, email?: string) {
+        this.name = name;
+        this.age = age;
+        this.email = email;
+    }
+
+    greet(): string {
+        return `Hi, I'm ${this.name} (${this.age})`;
+    }
+}
 
 function add(a: number, b: number): number {
     return a + b;
 }
 
-const sum = add(2, 3);
-
-enum Color {
-    Red,
-    Green,
-    Blue
+function multiply(a: number, b: number): number {
+    return a * b;
 }
 
-const color = Color.Red;
+const person = new PersonModel('Todd', 27, 'todd@example.com');
+console.log(person.greet());
 
-interface Person {
-    name: string;
-    age: number;
-}
-
-const person2: Person = {
-    name: 'Todd',
-    age: 27
-}
-
-const func_add = (a: number, b: number): number => {
-    return a + b;
-}
-
-const sum2 = func_add(2, 3);
+const favoriteColor: Color = Color.Blue;
+console.log(`Favorite color: ${favoriteColor}`);

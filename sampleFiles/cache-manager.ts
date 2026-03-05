@@ -81,4 +81,21 @@ export class CacheManager<T = unknown> {
       expiresAt: entry.expiresAt,
     }))
   }
+
+  stats(): { size: number; oldestEntry: number | null; newestEntry: number | null } {
+    this.evictExpired()
+    let oldest: number | null = null
+    let newest: number | null = null
+    for (const entry of this.store.values()) {
+      if (oldest === null || entry.createdAt < oldest) oldest = entry.createdAt
+      if (newest === null || entry.createdAt > newest) newest = entry.createdAt
+    }
+    return { size: this.store.size, oldestEntry: oldest, newestEntry: newest }
+  }
+
+  setMany(entries: Array<{ key: string; value: T; ttlMs?: number }>): void {
+    for (const entry of entries) {
+      this.set(entry.key, entry.value, entry.ttlMs)
+    }
+  }
 }

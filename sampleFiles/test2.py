@@ -54,3 +54,20 @@ class Calculator:
 calc = Calculator()
 print(calc.multiply(3, 4))
 print(calc.divide(10, 3))
+
+
+class StringUtils:
+    """String manipulation utilities"""
+
+    @staticmethod
+    def reverse(s: str) -> str:
+        return s[::-1]
+
+    @staticmethod
+    def is_palindrome(s: str) -> bool:
+        cleaned = s.lower().replace(' ', '')
+        return cleaned == cleaned[::-1]
+
+    @staticmethod
+    def word_count(s: str) -> int:
+        return len(s.split())

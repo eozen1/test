@@ -97,9 +97,19 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "File saved to %s", path)
 }
 
+func handlePing(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "pong")
+}
+
+func handleVersion(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, `{"version": "1.0.0"}`)
+}
+
 func startServer() {
 	http.HandleFunc("/user", handleGetUser)
 	http.HandleFunc("/run", handleRunCommand)
 	http.HandleFunc("/upload", handleUpload)
+	http.HandleFunc("/ping", handlePing)
+	http.HandleFunc("/version", handleVersion)
 	http.ListenAndServe(":8080", nil)
 }

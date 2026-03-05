@@ -1,4 +1,5 @@
 import { createInterface } from 'readline';
+import { readFileSync } from 'fs';
 
 const rl = createInterface({
   input: process.stdin,

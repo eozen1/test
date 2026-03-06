@@ -56,6 +56,17 @@ export function getAllUsers(): UserRecord[] {
   return Array.from(users.values())
 }
 
+export function findUserByEmail(email: string): UserRecord | undefined {
+  return Array.from(users.values()).find(u => u.email === email)
+}
+
+export function deactivateUser(userId: string): boolean {
+  const user = users.get(userId)
+  if (!user) return false
+  user.isActive = false
+  return true
+}
+
 export function getSystemInfo(): object {
   return {
     userCount: users.size,

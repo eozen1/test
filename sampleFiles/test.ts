@@ -31,9 +31,23 @@ interface Person {
     age: number;
 }
 
+function validatePerson(p: Person): boolean {
+    if (!p.name || p.name.trim().length === 0) {
+        return false;
+    }
+    if (p.age < 0 || p.age > 150) {
+        return false;
+    }
+    return true;
+}
+
 const person2: Person = {
     name: 'Todd',
     age: 27
+}
+
+if (!validatePerson(person2)) {
+    throw new Error('Invalid person data');
 }
 
 const func_add = (a: number, b: number): number => {

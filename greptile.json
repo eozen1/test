@@ -4,7 +4,5 @@
     "github-actions"
   ],
   "disabledLabels": ["bug"],
-  "triggerOnUpdates": true,
-  "fixWithAI": false,
-  "fixInIDE": "claude-code"
+  "triggerOnUpdates": true
 }

@@ -44,3 +44,54 @@ impl Printable for Color {
 fn add(a: i32, b: i32) -> i32 {
     a + b
 }
+
+trait Pool {
+    type Item;
+    fn acquire(&mut self) -> Option<Self::Item>;
+    fn release(&mut self, item: Self::Item);
+    fn size(&self) -> usize;
+}
+
+struct ObjectPool<T> {
+    available: Vec<T>,
+    factory: Box<dyn Fn() -> T>,
+    max_size: usize,
+}
+
+impl<T> ObjectPool<T> {
+    fn new(factory: impl Fn() -> T + 'static, initial_size: usize, max_size: usize) -> Self {
+        let mut available = Vec::with_capacity(max_size);
+        for _ in 0..initial_size {
+            available.push(factory());
+        }
+        Self {
+            available,
+            factory: Box::new(factory),
+            max_size,
+        }
+    }
+}
+
+impl<T> Pool for ObjectPool<T> {
+    type Item = T;
+
+    fn acquire(&mut self) -> Option<T> {
+        if let Some(item) = self.available.pop() {
+            Some(item)
+        } else if self.available.len() < self.max_size {
+            Some((self.factory)())
+        } else {
+            None
+        }
+    }
+
+    fn release(&mut self, item: T) {
+        if self.available.len() < self.max_size {
+            self.available.push(item);
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.available.len()
+    }
+}

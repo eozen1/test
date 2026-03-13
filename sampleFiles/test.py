@@ -2,11 +2,17 @@
 # python
 
 class Testing():
-  def __init__(self) -> None:
-    self.name = 'Joe'
+  def __init__(self, name: str = 'Joe') -> None:
+    self.name = name
+    self.history: list[str] = []
 
   def greet(self):
-    print('Hello, ' + self.name)
+    msg = f'Hello, {self.name}'
+    self.history.append(msg)
+    print(msg)
+
+  def get_history(self) -> list[str]:
+    return list(self.history)
 
 test = Testing()
 test.greet()

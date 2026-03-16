@@ -1,0 +1,581 @@
+// Multi-tenant SaaS Platform Schema
+// Central hub: Organization with connections to all subsystems
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum IntegrationProvider {
+  SLACK
+  JIRA
+  GITHUB
+  GITLAB
+  LINEAR
+  NOTION
+  SALESFORCE
+  HUBSPOT
+  ZENDESK
+  PAGERDUTY
+  DATADOG
+  AWS
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  INVITE
+  REVOKE
+  EXPORT
+  IMPORT
+  CONFIGURE
+}
+
+enum FeatureFlagType {
+  BOOLEAN
+  PERCENTAGE
+  VARIANT
+}
+
+model Organization {
+  id                  String              @id @default(uuid())
+  name                String
+  slug                String              @unique
+  domain              String?             @unique
+  logoUrl             String?
+  industry            String?
+  size                String?
+  website             String?
+  billingEmail        String
+  technicalEmail      String?
+  phone               String?
+  addressLine1        String?
+  addressLine2        String?
+  city                String?
+  state               String?
+  zipCode             String?
+  country             String              @default("US")
+  timezone            String              @default("UTC")
+  defaultLocale       String              @default("en")
+  ssoEnabled          Boolean             @default(false)
+  ssoProvider         String?
+  ssoMetadataUrl      String?
+  mfaRequired         Boolean             @default(false)
+  ipAllowlist         String[]
+  dataResidency       String              @default("us-east-1")
+  isActive            Boolean             @default(true)
+  onboardingCompleted Boolean             @default(false)
+  trialEndsAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  members             OrganizationMember[]
+  teams               Team[]
+  subscription        Subscription?
+  invoices            Invoice[]
+  apiKeys             ApiKey[]
+  integrations        Integration[]
+  webhooks            Webhook[]
+  auditLogs           AuditLog[]
+  projects            Project[]
+  featureFlags        FeatureFlagOverride[]
+  usageRecords        UsageRecord[]
+  ssoConfigs          SsoConfiguration[]
+  customDomains       CustomDomain[]
+  dataExports         DataExport[]
+  notifications       NotificationPreference[]
+  invitations         Invitation[]
+}
+
+model OrganizationMember {
+  id              String        @id @default(uuid())
+  organizationId  String
+  userId          String
+  role            String        @default("member")
+  permissions     String[]
+  isOwner         Boolean       @default(false)
+  joinedAt        DateTime      @default(now())
+  lastActiveAt    DateTime?
+  invitedBy       String?
+  deactivatedAt   DateTime?
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id])
+  teamMemberships TeamMember[]
+
+  @@unique([organizationId, userId])
+}
+
+model User {
+  id              String                @id @default(uuid())
+  email           String                @unique
+  name            String?
+  avatarUrl       String?
+  passwordHash    String?
+  emailVerified   Boolean               @default(false)
+  mfaEnabled      Boolean               @default(false)
+  mfaSecret       String?
+  provider        String?
+  providerId      String?
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+  loginCount      Int                   @default(0)
+  failedAttempts  Int                   @default(0)
+  lockedUntil     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  memberships     OrganizationMember[]
+  sessions        Session[]
+  personalTokens  PersonalAccessToken[]
+  notifications   UserNotification[]
+}
+
+model Session {
+  id          String    @id @default(uuid())
+  userId      String
+  token       String    @unique
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model PersonalAccessToken {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String
+  tokenHash   String    @unique
+  scopes      String[]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Team {
+  id              String        @id @default(uuid())
+  organizationId  String
+  name            String
+  slug            String
+  description     String?
+  avatarUrl       String?
+  isDefault       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members         TeamMember[]
+  projects        ProjectTeam[]
+
+  @@unique([organizationId, slug])
+}
+
+model TeamMember {
+  id        String              @id @default(uuid())
+  teamId    String
+  memberId  String
+  role      String              @default("member")
+  joinedAt  DateTime            @default(now())
+
+  team      Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  member    OrganizationMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, memberId])
+}
+
+model Subscription {
+  id              String              @id @default(uuid())
+  organizationId  String              @unique
+  tier            SubscriptionTier    @default(FREE)
+  status          SubscriptionStatus  @default(TRIALING)
+  stripeCustomerId    String?         @unique
+  stripeSubscriptionId String?        @unique
+  seatCount       Int                 @default(5)
+  seatLimit       Int                 @default(5)
+  monthlyPrice    Float               @default(0)
+  annualDiscount  Float?
+  billingCycle    String              @default("monthly")
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean          @default(false)
+  trialStart      DateTime?
+  trialEnd        DateTime?
+  lastPaymentAt   DateTime?
+  nextPaymentAt   DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+
+  @@index([stripeCustomerId])
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  organizationId  String
+  invoiceNumber   String        @unique
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Float
+  taxAmount       Float         @default(0)
+  discountAmount  Float         @default(0)
+  totalAmount     Float
+  currency        String        @default("USD")
+  dueDate         DateTime?
+  paidAt          DateTime?
+  stripeInvoiceId String?       @unique
+  pdfUrl          String?
+  lineItems       Json
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model ApiKey {
+  id              String        @id @default(uuid())
+  organizationId  String
+  name            String
+  keyHash         String        @unique
+  prefix          String
+  scopes          String[]
+  rateLimit       Int           @default(1000)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  isActive        Boolean       @default(true)
+  createdBy       String
+  createdAt       DateTime      @default(now())
+  revokedAt       DateTime?
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([prefix])
+}
+
+model Integration {
+  id              String                @id @default(uuid())
+  organizationId  String
+  provider        IntegrationProvider
+  name            String
+  accessToken     String?
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  webhookSecret   String?
+  config          Json?
+  isActive        Boolean               @default(true)
+  lastSyncAt      DateTime?
+  errorCount      Int                   @default(0)
+  lastError       String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  syncLogs        IntegrationSyncLog[]
+
+  @@unique([organizationId, provider])
+}
+
+model IntegrationSyncLog {
+  id              String      @id @default(uuid())
+  integrationId   String
+  direction       String
+  recordsTotal    Int         @default(0)
+  recordsSynced   Int         @default(0)
+  recordsFailed   Int         @default(0)
+  errorDetails    Json?
+  startedAt       DateTime    @default(now())
+  completedAt     DateTime?
+
+  integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+}
+
+model Webhook {
+  id              String        @id @default(uuid())
+  organizationId  String
+  url             String
+  secret          String
+  events          String[]
+  isActive        Boolean       @default(true)
+  failureCount    Int           @default(0)
+  lastTriggeredAt DateTime?
+  lastResponseCode Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries      WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id              String    @id @default(uuid())
+  webhookId       String
+  event           String
+  payload         Json
+  responseCode    Int?
+  responseBody    String?
+  attemptCount    Int       @default(1)
+  deliveredAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  webhook         Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+}
+
+model AuditLog {
+  id              String        @id @default(uuid())
+  organizationId  String
+  actorId         String?
+  actorEmail      String?
+  action          AuditAction
+  resourceType    String
+  resourceId      String?
+  changes         Json?
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  organizationId  String
+  name            String
+  slug            String
+  description     String?
+  isArchived      Boolean       @default(false)
+  visibility      String        @default("private")
+  settings        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teams           ProjectTeam[]
+  environments    Environment[]
+
+  @@unique([organizationId, slug])
+}
+
+model ProjectTeam {
+  projectId   String
+  teamId      String
+  accessLevel String    @default("read")
+  grantedAt   DateTime  @default(now())
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, teamId])
+}
+
+model Environment {
+  id          String    @id @default(uuid())
+  projectId   String
+  name        String
+  slug        String
+  url         String?
+  variables   Json?
+  isProtected Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, slug])
+}
+
+model FeatureFlag {
+  id          String            @id @default(uuid())
+  key         String            @unique
+  name        String
+  description String?
+  type        FeatureFlagType   @default(BOOLEAN)
+  defaultValue Json
+  isEnabled   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  overrides   FeatureFlagOverride[]
+}
+
+model FeatureFlagOverride {
+  id              String        @id @default(uuid())
+  flagId          String
+  organizationId  String
+  value           Json
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+
+  flag            FeatureFlag   @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([flagId, organizationId])
+}
+
+model UsageRecord {
+  id              String        @id @default(uuid())
+  organizationId  String
+  metric          String
+  value           Float
+  period          String
+  periodStart     DateTime
+  periodEnd       DateTime
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, metric, periodStart])
+}
+
+model SsoConfiguration {
+  id              String        @id @default(uuid())
+  organizationId  String
+  provider        String
+  entityId        String
+  ssoUrl          String
+  certificate     String
+  isActive        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+}
+
+model CustomDomain {
+  id              String        @id @default(uuid())
+  organizationId  String
+  domain          String        @unique
+  verified        Boolean       @default(false)
+  sslCertId       String?
+  dnsRecords      Json?
+  createdAt       DateTime      @default(now())
+  verifiedAt      DateTime?
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model DataExport {
+  id              String        @id @default(uuid())
+  organizationId  String
+  format          String        @default("csv")
+  scope           String
+  status          String        @default("pending")
+  fileUrl         String?
+  fileSize        Int?
+  requestedBy     String
+  startedAt       DateTime?
+  completedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model NotificationPreference {
+  id              String        @id @default(uuid())
+  organizationId  String
+  channel         String
+  eventType       String
+  isEnabled       Boolean       @default(true)
+  config          Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, channel, eventType])
+}
+
+model UserNotification {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String
+  title       String
+  body        String
+  isRead      Boolean   @default(false)
+  actionUrl   String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  readAt      DateTime?
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invitation {
+  id              String        @id @default(uuid())
+  organizationId  String
+  email           String
+  role            String        @default("member")
+  invitedBy       String
+  token           String        @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime      @default(now())
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+}

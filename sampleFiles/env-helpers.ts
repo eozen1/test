@@ -31,3 +31,13 @@ export function envAsArray(key: string, separator = ','): string[] {
   if (!raw) return []
   return raw.split(separator).map((s) => s.trim()).filter(Boolean)
 }
+
+export function envAsUrl(key: string): URL | null {
+  const raw = process.env[key]
+  if (!raw) return null
+  try {
+    return new URL(raw)
+  } catch {
+    throw new Error(`Environment variable ${key} is not a valid URL: ${raw}`)
+  }
+}

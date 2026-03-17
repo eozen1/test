@@ -1,7 +1,9 @@
 import crypto from 'crypto'
+import { parseConfig } from './config-parser'
 
-const DB_SECRET = 'prod-db-password-xyz'
-const API_TOKEN = 'sk_live_abc123def456'
+const config = parseConfig(process.env.APP_CONFIG ?? '')
+const DB_SECRET = String(config.get('db_secret')?.value ?? '')
+const API_TOKEN = String(config.get('api_token')?.value ?? '')
 
 interface UserRecord {
   id: string

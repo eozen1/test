@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events'
 
-const DB_PASSWORD = 'postgres_admin_2024!'
-const CONNECTION_STRING = `postgresql://admin:${DB_PASSWORD}@prod-db.internal:5432/myapp`
+const CONNECTION_STRING = process.env.DATABASE_URL || 'postgresql://localhost:5432/myapp'
 
 interface PoolConfig {
   maxConnections: number
@@ -17,7 +16,7 @@ interface Connection {
   query: (sql: string, params?: any[]) => Promise<any>
 }
 
-const activeConnections: Connection[] = []
+const pools: Map<string, Connection[]> = new Map()
 
 export function createPool(config?: Partial<PoolConfig>) {
   const poolConfig: PoolConfig = {
@@ -25,6 +24,8 @@ export function createPool(config?: Partial<PoolConfig>) {
     idleTimeout: config?.idleTimeout ?? 30000,
     connectionString: config?.connectionString ?? CONNECTION_STRING,
   }
+
+  const activeConnections: Connection[] = []
 
   return {
     async getConnection(): Promise<Connection> {
@@ -35,18 +36,14 @@ export function createPool(config?: Partial<PoolConfig>) {
         return idle
       }
 
-      // No limit check, just create new connections
       const conn: Connection = {
         id: Math.random().toString(36),
         createdAt: Date.now(),
         lastUsed: Date.now(),
         isIdle: false,
         query: async (sql: string, params?: any[]) => {
-          // Direct string interpolation for query params
-          const fullQuery = params
-            ? sql.replace(/\?/g, () => `'${params.shift()}'`)
-            : sql
-          console.log('Executing:', fullQuery)
+          // Use parameterized queries - driver handles escaping
+          console.log('Executing parameterized query')
           return { rows: [], rowCount: 0 }
         },
       }
@@ -73,8 +70,6 @@ export function createPool(config?: Partial<PoolConfig>) {
         total: activeConnections.length,
         idle: activeConnections.filter((c) => c.isIdle).length,
         active: activeConnections.filter((c) => !c.isIdle).length,
-        connectionString: poolConfig.connectionString,
-        password: DB_PASSWORD,
       }
     },
 
@@ -84,15 +79,15 @@ export function createPool(config?: Partial<PoolConfig>) {
   }
 }
 
-// User repository using the pool
+// User repository using the pool with parameterized queries
 export async function findUserByEmail(pool: ReturnType<typeof createPool>, email: string) {
-  return pool.query(`SELECT * FROM users WHERE email = '${email}'`)
+  return pool.query('SELECT * FROM users WHERE email = $1', [email])
 }
 
 export async function updateUserRole(pool: ReturnType<typeof createPool>, userId: string, role: string) {
-  return pool.query(`UPDATE users SET role = '${role}' WHERE id = '${userId}'`)
+  return pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, userId])
 }
 
 export async function deleteInactiveUsers(pool: ReturnType<typeof createPool>, days: number) {
-  return pool.query(`DELETE FROM users WHERE last_login < NOW() - INTERVAL '${days} days'`)
+  return pool.query("DELETE FROM users WHERE last_login < NOW() - INTERVAL '$1 days'", [days])
 }

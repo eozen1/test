@@ -141,3 +141,48 @@ export function parseConnectionString(connStr: string): {
 
   throw new Error(`Invalid connection string: ${connStr}`)
 }
+
+// Batch-validate a list of webhook registrations and return only valid ones
+export function filterValidWebhooks(
+  urls: string[],
+  allowedDomains: string[],
+  routePatterns: string[]
+): { url: string; route: RouteMatch }[] {
+  const results: { url: string; route: RouteMatch }[] = []
+
+  for (const url of urls) {
+    if (!isValidCallbackUrl(url, allowedDomains)) continue
+
+    const route = matchRoute(url, routePatterns)
+    if (route) {
+      results.push({ url, route })
+    }
+  }
+
+  return results
+}
+
+// Check if a path matches any repository endpoint pattern
+// Handles formats like /repositories/org/repo, /org/repo, /repos/org/repo$
+export function isRepositoryEndpoint(path: string): boolean {
+  const patterns = [
+    /^\/repositories\/[^/]+\/[^/]+$/,
+    /^\/repos\/[^/]+\/[^/]+$/,
+    /^\/api\/v\d+\/repos\/[^/]+\/[^/]+$/,
+    REPO_PATH_REGEX,
+  ]
+  return patterns.some(p => p.test(path))
+}
+
+// Sanitize user-provided path input before routing
+export function sanitizePath(input: string): string {
+  // Remove null bytes
+  let clean = input.replace(/\0/g, '')
+  // Collapse repeated slashes
+  clean = clean.replace(/\/{2,}/g, '/')
+  // Remove path traversal attempts
+  clean = clean.replace(/\.{2,}\//g, '')
+  // Normalize trailing slash
+  clean = clean.replace(/\/+$/, '') || '/'
+  return clean
+}

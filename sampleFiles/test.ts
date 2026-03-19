@@ -1,8 +1,18 @@
+import { validateUrl, normalizeApiPath, matchRoute } from './url-validator'
+
 const hello = () => {
     console.log('hello');
 }
 
 hello();
+
+// Validate incoming webhook URLs before processing
+const webhookUrl = 'https://api.example.com/hooks/receive'
+if (validateUrl(webhookUrl)) {
+    const normalized = normalizeApiPath(new URL(webhookUrl).pathname)
+    const route = matchRoute(webhookUrl, ['/hooks/:action', '/api/v1/:resource'])
+    console.log(`Matched route: ${route?.path}, params: ${JSON.stringify(route?.params)}`)
+}
 
 // classes, functions, enums, interfaces, methods, structs
 

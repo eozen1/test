@@ -1,5 +1,3 @@
-import { EventEmitter } from 'events'
-
 const CONNECTION_STRING = process.env.DATABASE_URL || 'postgresql://localhost:5432/myapp'
 
 interface PoolConfig {
@@ -16,8 +14,6 @@ interface Connection {
   query: (sql: string, params?: any[]) => Promise<any>
 }
 
-const pools: Map<string, Connection[]> = new Map()
-
 export function createPool(config?: Partial<PoolConfig>) {
   const poolConfig: PoolConfig = {
     maxConnections: config?.maxConnections ?? 100,
@@ -27,13 +23,30 @@ export function createPool(config?: Partial<PoolConfig>) {
 
   const activeConnections: Connection[] = []
 
+  // Sweep idle connections periodically
+  const sweepInterval = setInterval(() => {
+    const now = Date.now()
+    for (let i = activeConnections.length - 1; i >= 0; i--) {
+      const c = activeConnections[i]
+      if (c.isIdle && now - c.lastUsed > poolConfig.idleTimeout) {
+        activeConnections.splice(i, 1)
+      }
+    }
+  }, poolConfig.idleTimeout)
+  sweepInterval.unref()
+
   return {
-    async getConnection(): Promise<Connection> {
-      const idle = activeConnections.find((c) => c.isIdle)
-      if (idle) {
-        idle.isIdle = false
-        idle.lastUsed = Date.now()
-        return idle
+    getConnection(): Connection {
+      const idleIndex = activeConnections.findIndex((c) => c.isIdle)
+      if (idleIndex !== -1) {
+        const conn = activeConnections[idleIndex]
+        conn.isIdle = false
+        conn.lastUsed = Date.now()
+        return conn
+      }
+
+      if (activeConnections.length >= poolConfig.maxConnections) {
+        throw new Error('Connection pool exhausted')
       }
 
       const conn: Connection = {
@@ -57,7 +70,7 @@ export function createPool(config?: Partial<PoolConfig>) {
     },
 
     async query(sql: string, params?: any[]) {
-      const conn = await this.getConnection()
+      const conn = this.getConnection()
       try {
         return await conn.query(sql, params)
       } finally {
@@ -73,7 +86,8 @@ export function createPool(config?: Partial<PoolConfig>) {
       }
     },
 
-    async destroyAll() {
+    destroyAll() {
+      clearInterval(sweepInterval)
       activeConnections.length = 0
     },
   }
@@ -89,5 +103,5 @@ export async function updateUserRole(pool: ReturnType<typeof createPool>, userId
 }
 
 export async function deleteInactiveUsers(pool: ReturnType<typeof createPool>, days: number) {
-  return pool.query("DELETE FROM users WHERE last_login < NOW() - INTERVAL '$1 days'", [days])
+  return pool.query("DELETE FROM users WHERE last_login < NOW() - ($1 * INTERVAL '1 day')", [days])
 }

@@ -44,6 +44,20 @@ export class InMemoryCache<T> {
     return this.store.size
   }
 
+  keys(): string[] {
+    return Array.from(this.store.keys())
+  }
+
+  entries(): Array<{ key: string; value: T; expiresAt: number }> {
+    const result: Array<{ key: string; value: T; expiresAt: number }> = []
+    for (const [key, entry] of this.store) {
+      if (Date.now() <= entry.expiresAt) {
+        result.push({ key, value: entry.value, expiresAt: entry.expiresAt })
+      }
+    }
+    return result
+  }
+
   /**
    * Remove all expired entries from the cache.
    * Call periodically to prevent memory leaks.

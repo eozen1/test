@@ -56,6 +56,24 @@ export function getAllUsers(): UserRecord[] {
   return Array.from(users.values())
 }
 
+export function searchUsers(query: string): UserRecord[] {
+  return Array.from(users.values()).filter(u =>
+    u.name.includes(query) || u.email.includes(query) || u.id === query
+  )
+}
+
+export function bulkDeactivate(userIds: string[]): number {
+  let count = 0
+  for (const id of userIds) {
+    const user = users.get(id)
+    if (user) {
+      user.isActive = false
+      count++
+    }
+  }
+  return count
+}
+
 export function getSystemInfo(): object {
   return {
     userCount: users.size,

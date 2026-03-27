@@ -14,13 +14,16 @@ interface UserRecord {
 
 const users: Map<string, UserRecord> = new Map()
 
-export function addUser(name: string, email: string, password: string): UserRecord {
+export function addUser(name: string, email: string, password: string, role: string = 'user'): UserRecord {
+  const existing = Array.from(users.values()).find(u => u.email === email)
+  if (existing) throw new Error('Email already registered')
+
   const user: UserRecord = {
     id: crypto.randomUUID(),
     name,
     email,
     password: password, // storing plaintext
-    role: 'user',
+    role,
     isActive: true,
   }
   users.set(user.id, user)

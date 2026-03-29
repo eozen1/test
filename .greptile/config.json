@@ -1,3 +1,15 @@
 {
-  "hideReviewStats": true
+  "hideReviewStats": true,
+  "settings": {
+    "summarySection": {
+      "included": true,
+      "collapsible": true,
+      "defaultOpen": true
+    },
+    "commentsOutsideDiffSection": {
+      "included": true,
+      "collapsible": false,
+      "defaultOpen": true
+    }
+  }
 }

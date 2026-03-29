@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  domain      String?  @unique
+  plan        Plan     @default(FREE)
+  maxSeats    Int      @default(5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     Membership[]
+  teams       Team[]
+  projects    Project[]
+  apiKeys     ApiKey[]
+  auditLog    AuditEntry[]
+  invitations Invitation[]
+
+  @@index([slug])
+  @@index([domain])
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String
+  avatarUrl     String?
+  emailVerified Boolean  @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  memberships   Membership[]
+  assignedTasks Task[]       @relation("AssignedTasks")
+  createdTasks  Task[]       @relation("CreatedTasks")
+  comments      Comment[]
+  auditEntries  AuditEntry[]
+
+  @@index([email])
+}
+
+model Membership {
+  id        String         @id @default(uuid())
+  role      MembershipRole @default(MEMBER)
+  userId    String
+  orgId     String
+  joinedAt  DateTime       @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org       Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  teamMemberships TeamMembership[]
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  orgId       String
+  createdAt   DateTime @default(now())
+
+  org         Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  members     TeamMembership[]
+  projects    Project[]
+
+  @@unique([orgId, name])
+}
+
+model TeamMembership {
+  id           String     @id @default(uuid())
+  teamId       String
+  membershipId String
+  role         TeamRole   @default(CONTRIBUTOR)
+  joinedAt     DateTime   @default(now())
+
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, membershipId])
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  key         String
+  description String?
+  visibility  Visibility    @default(PRIVATE)
+  status      ProjectStatus @default(ACTIVE)
+  orgId       String
+  teamId      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  team        Team?         @relation(fields: [teamId], references: [id])
+  tasks       Task[]
+  labels      Label[]
+  milestones  Milestone[]
+
+  @@unique([orgId, key])
+  @@index([orgId])
+  @@index([teamId])
+}
+
+model Task {
+  id            String     @id @default(uuid())
+  title         String
+  description   String?
+  status        TaskStatus @default(TODO)
+  priority      Priority   @default(MEDIUM)
+  dueDate       DateTime?
+  estimateHours Float?
+  projectId     String
+  assigneeId    String?
+  creatorId     String
+  milestoneId   String?
+  parentId      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee      User?      @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creator       User       @relation("CreatedTasks", fields: [creatorId], references: [id])
+  milestone     Milestone? @relation(fields: [milestoneId], references: [id])
+  parent        Task?      @relation("SubTasks", fields: [parentId], references: [id])
+  subtasks      Task[]     @relation("SubTasks")
+  comments      Comment[]
+  taskLabels    TaskLabel[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([milestoneId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  body      String
+  taskId    String
+  authorId  String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  parent    Comment? @relation("Replies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("Replies")
+
+  @@index([taskId])
+  @@index([authorId])
+}
+
+model Label {
+  id        String      @id @default(uuid())
+  name      String
+  color     String      @default("#6B7280")
+  projectId String
+
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskLabels TaskLabel[]
+
+  @@unique([projectId, name])
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+model Milestone {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      MilestoneStatus @default(OPEN)
+  projectId   String
+  createdAt   DateTime        @default(now())
+
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([projectId])
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  name        String
+  keyHash     String   @unique
+  prefix      String
+  scopes      String[]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  orgId       String
+  createdAt   DateTime @default(now())
+
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([prefix])
+}
+
+model AuditEntry {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  orgId      String
+  actorId    String
+  createdAt  DateTime @default(now())
+
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actor      User         @relation(fields: [actorId], references: [id])
+
+  @@index([orgId, createdAt])
+  @@index([entityType, entityId])
+  @@index([actorId])
+}
+
+model Invitation {
+  id        String           @id @default(uuid())
+  email     String
+  role      MembershipRole   @default(MEMBER)
+  status    InvitationStatus @default(PENDING)
+  orgId     String
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  org       Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([email, orgId])
+  @@index([orgId])
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum TeamRole {
+  LEAD
+  CONTRIBUTOR
+  VIEWER
+}
+
+enum Visibility {
+  PUBLIC
+  INTERNAL
+  PRIVATE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum MilestoneStatus {
+  OPEN
+  CLOSED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}

@@ -46,7 +46,11 @@ type Shape interface {
 // method
 
 func (p Person) sayHello() {
-	fmt.Println("Hello")
+	fmt.Println("Hello, my name is " + p.name)
+}
+
+func (p Person) isAdult() bool {
+	return p.age >= 18
 }
 
 // struct
@@ -54,4 +58,15 @@ func (p Person) sayHello() {
 type Rectangle struct {
 	width  float64
 	height float64
+}
+
+func (r Rectangle) perimeter() float64 {
+	return 2 * (r.width + r.height)
+}
+
+func (r Rectangle) scale(factor float64) Rectangle {
+	return Rectangle{
+		width:  r.width * factor,
+		height: r.height * factor,
+	}
 }

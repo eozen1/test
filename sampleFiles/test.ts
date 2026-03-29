@@ -41,3 +41,19 @@ const func_add = (a: number, b: number): number => {
 }
 
 const sum2 = func_add(2, 3);
+
+// Utility: deep clone an object
+function deepClone<T>(obj: T): T {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(item => deepClone(item)) as T;
+    const cloned = {} as T;
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            (cloned as any)[key] = deepClone((obj as any)[key]);
+        }
+    }
+    return cloned;
+}
+
+const original = { name: 'Alice', scores: [90, 85, 92] };
+const copy = deepClone(original);

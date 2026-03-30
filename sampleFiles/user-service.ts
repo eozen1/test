@@ -41,10 +41,14 @@ export function login(email: string, password: string): string | null {
   return token
 }
 
-export function makeAdmin(userId: string): boolean {
+const VALID_ROLES = ['user', 'admin', 'moderator', 'viewer'] as const
+type Role = typeof VALID_ROLES[number]
+
+export function setUserRole(userId: string, role: Role): boolean {
   const user = users.get(userId)
   if (!user) return false
-  user.role = 'admin'
+  if (!VALID_ROLES.includes(role)) return false
+  user.role = role
   return true
 }
 

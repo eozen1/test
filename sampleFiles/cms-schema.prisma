@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  WorkspaceMember[]
+  sites    Site[]
+  apiKeys  ApiKey[]
+  assets   Asset[]
+
+  @@index([slug])
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  role        MemberRole    @default(EDITOR)
+  invitedAt   DateTime      @default(now())
+  acceptedAt  DateTime?
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String
+  avatarUrl     String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  memberships   WorkspaceMember[]
+  contentEdits  ContentVersion[]
+  comments      Comment[]
+
+  @@index([email])
+}
+
+model Site {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  domain      String?  @unique
+  defaultLocale String @default("en")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  collections Collection[]
+  pages       Page[]
+  navigation  NavigationMenu[]
+
+  @@index([workspaceId])
+  @@index([domain])
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  schema      Json     // Field definitions for this collection type
+
+  entries Entry[]
+
+  @@unique([siteId, slug])
+}
+
+model Entry {
+  id           String   @id @default(uuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  slug         String
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  versions ContentVersion[]
+  tags     EntryTag[]
+  comments Comment[]
+
+  @@unique([collectionId, slug])
+  @@index([status])
+  @@index([publishedAt])
+}
+
+model ContentVersion {
+  id        String   @id @default(uuid())
+  entryId   String
+  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  data      Json     // Versioned content fields
+  version   Int
+  changelog String?
+  locale    String   @default("en")
+  createdAt DateTime @default(now())
+
+  @@unique([entryId, version, locale])
+  @@index([authorId])
+}
+
+enum ContentStatus {
+  DRAFT
+  IN_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model Page {
+  id        String   @id @default(uuid())
+  siteId    String
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  title     String
+  slug      String
+  parentId  String?
+  parent    Page?    @relation("PageTree", fields: [parentId], references: [id])
+  children  Page[]   @relation("PageTree")
+  content   Json
+  status    ContentStatus @default(DRAFT)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteId, slug])
+  @@index([parentId])
+  @@index([sortOrder])
+}
+
+model Tag {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  entries EntryTag[]
+}
+
+model EntryTag {
+  id      String @id @default(uuid())
+  entryId String
+  entry   Entry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, tagId])
+}
+
+model Asset {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  filename    String
+  mimeType    String
+  size        Int
+  url         String
+  altText     String?
+  width       Int?
+  height      Int?
+  uploadedAt  DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([mimeType])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  entryId   String
+  entry     Entry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  parentId  String?
+  parent    Comment? @relation("CommentThread", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentThread")
+  body      String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entryId])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model NavigationMenu {
+  id     String @id @default(uuid())
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name   String
+  items  Json   // Array of {label, url, children} items
+
+  @@unique([siteId, name])
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  keyHash     String    @unique
+  prefix      String    // First 8 chars for identification
+  permissions String[]  // e.g. ["content:read", "content:write", "assets:read"]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([prefix])
+}

@@ -1,8 +1,17 @@
+import { validateConfig } from './config-validator'
+
 const hello = () => {
     console.log('hello');
 }
 
 hello();
+
+const config = validateConfig({
+    databaseUrl: 'postgresql://localhost:5432/mydb',
+    port: 8080,
+})
+
+console.log('Config loaded:', config);
 
 // classes, functions, enums, interfaces, methods, structs
 

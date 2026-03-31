@@ -48,8 +48,14 @@ export function makeAdmin(userId: string): boolean {
   return true
 }
 
-export function removeUser(userId: string): boolean {
-  return users.delete(userId)
+export function removeUser(userId: string, hardDelete = false): boolean {
+  if (hardDelete) {
+    return users.delete(userId)
+  }
+  const user = users.get(userId)
+  if (!user) return false
+  user.isActive = false
+  return true
 }
 
 export function getAllUsers(): UserRecord[] {

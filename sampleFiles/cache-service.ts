@@ -45,6 +45,10 @@ export function getOrSet<T>(key: string, factory: () => T, ttlMs: number = 60000
 }
 
 // Periodic cleanup of expired entries
+export function clear(): void {
+  cache.clear()
+}
+
 export function startCleanup(intervalMs: number = 30000): NodeJS.Timer {
   return setInterval(() => {
     const now = Date.now()

@@ -37,7 +37,7 @@ export function invalidate(pattern: string): number {
 
 export function getOrSet<T>(key: string, factory: () => T, ttlMs: number = 60000): T {
   const existing = get<T>(key)
-  if (existing) return existing
+  if (existing !== null) return existing
 
   const value = factory()
   set(key, value, ttlMs)

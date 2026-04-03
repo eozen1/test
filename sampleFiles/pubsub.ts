@@ -34,7 +34,7 @@ export async function publish<T>(topic: string, payload: T): Promise<void> {
   if (!subs) return
 
   const errors: Error[] = []
-  for (const sub of subs) {
+  for (const sub of [...subs]) {
     try {
       await sub.handler(payload)
     } catch (err) {
@@ -43,7 +43,7 @@ export async function publish<T>(topic: string, payload: T): Promise<void> {
   }
 
   if (errors.length > 0) {
-    console.log(`${errors.length} handler(s) failed for topic "${topic}"`)
+    console.error(`${errors.length} handler(s) failed for topic "${topic}"`, errors)
   }
 }
 

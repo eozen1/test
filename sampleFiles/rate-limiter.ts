@@ -1,0 +1,47 @@
+interface RateLimitConfig {
+  windowMs: number
+  maxRequests: number
+}
+
+interface RateLimitEntry {
+  count: number
+  resetAt: number
+}
+
+const store = new Map<string, RateLimitEntry>()
+
+export function createRateLimiter(config: RateLimitConfig) {
+  return function checkLimit(clientId: string): { allowed: boolean; remaining: number; resetAt: number } {
+    const now = Date.now()
+    const entry = store.get(clientId)
+
+    if (!entry || now > entry.resetAt) {
+      store.set(clientId, { count: 1, resetAt: now + config.windowMs })
+      return { allowed: true, remaining: config.maxRequests - 1, resetAt: now + config.windowMs }
+    }
+
+    entry.count++
+
+    if (entry.count > config.maxRequests) {
+      return { allowed: false, remaining: 0, resetAt: entry.resetAt }
+    }
+
+    return { allowed: true, remaining: config.maxRequests - entry.count, resetAt: entry.resetAt }
+  }
+}
+
+export function clearExpired(): number {
+  const now = Date.now()
+  let cleared = 0
+  for (const [key, entry] of store) {
+    if (now > entry.resetAt) {
+      store.delete(key)
+      cleared++
+    }
+  }
+  return cleared
+}
+
+export function getStoreSize(): number {
+  return store.size
+}

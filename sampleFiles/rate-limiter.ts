@@ -55,3 +55,9 @@ export function getRemainingRequests(clientId: string, maxRequests: number): num
   if (!entry || Date.now() > entry.resetAt) return maxRequests
   return Math.max(0, maxRequests - entry.count)
 }
+
+export function isRateLimited(clientId: string, maxRequests: number): boolean {
+  const entry = store.get(clientId)
+  if (!entry || Date.now() > entry.resetAt) return false
+  return entry.count >= maxRequests
+}

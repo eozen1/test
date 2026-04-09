@@ -75,3 +75,8 @@ export function getWindowMs(clientId: string): number | null {
   if (!entry) return null
   return Math.max(0, entry.resetAt - Date.now())
 }
+
+export function getTotalRequests(clientId: string): number {
+  const entry = store.get(clientId)
+  return entry?.count ?? 0
+}

@@ -65,3 +65,7 @@ export function isRateLimited(clientId: string, maxRequests: number): boolean {
 export function getClientInfo(clientId: string): RateLimitEntry | null {
   return store.get(clientId) ?? null
 }
+
+export function clearAll(): void {
+  store.clear()
+}

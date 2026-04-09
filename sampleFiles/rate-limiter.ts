@@ -49,3 +49,9 @@ export function getStoreSize(): number {
 export function resetClient(clientId: string): boolean {
   return store.delete(clientId)
 }
+
+export function getRemainingRequests(clientId: string, maxRequests: number): number {
+  const entry = store.get(clientId)
+  if (!entry || Date.now() > entry.resetAt) return maxRequests
+  return Math.max(0, maxRequests - entry.count)
+}

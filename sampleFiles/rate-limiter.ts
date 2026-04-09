@@ -45,3 +45,7 @@ export function clearExpired(): number {
 export function getStoreSize(): number {
   return store.size
 }
+
+export function resetClient(clientId: string): boolean {
+  return store.delete(clientId)
+}

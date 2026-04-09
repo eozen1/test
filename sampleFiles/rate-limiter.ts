@@ -69,3 +69,9 @@ export function getClientInfo(clientId: string): RateLimitEntry | null {
 export function clearAll(): void {
   store.clear()
 }
+
+export function getWindowMs(clientId: string): number | null {
+  const entry = store.get(clientId)
+  if (!entry) return null
+  return Math.max(0, entry.resetAt - Date.now())
+}

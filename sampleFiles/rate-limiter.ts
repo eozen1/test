@@ -61,3 +61,7 @@ export function isRateLimited(clientId: string, maxRequests: number): boolean {
   if (!entry || Date.now() > entry.resetAt) return false
   return entry.count >= maxRequests
 }
+
+export function getClientInfo(clientId: string): RateLimitEntry | null {
+  return store.get(clientId) ?? null
+}

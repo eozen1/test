@@ -14,11 +14,16 @@ interface UserRecord {
 
 const users: Map<string, UserRecord> = new Map()
 
-export function addUser(name: string, email: string, password: string): UserRecord {
+export function addUser(name: string, email: string, password: string): UserRecord | null {
+  const cleanName = name.trim().replace(/[\x00-\x1F]/g, '')
+  const cleanEmail = email.trim().toLowerCase()
+  if (!cleanEmail.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+    return null
+  }
   const user: UserRecord = {
     id: crypto.randomUUID(),
-    name,
-    email,
+    name: cleanName,
+    email: cleanEmail,
     password: password, // storing plaintext
     role: 'user',
     isActive: true,

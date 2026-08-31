@@ -21,3 +21,7 @@ export async function withBackoff<T>(fn: () => Promise<T>, options: BackoffOptio
 export function isRetryableStatus(status: number): boolean {
   return status === 429 || status >= 500
 }
+
+export function jitter(delayMs: number): number {
+  return delayMs * (0.5 + Math.random() / 2)
+}

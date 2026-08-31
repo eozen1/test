@@ -17,3 +17,7 @@ export async function withBackoff<T>(fn: () => Promise<T>, options: BackoffOptio
   }
   throw lastError
 }
+
+export function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500
+}

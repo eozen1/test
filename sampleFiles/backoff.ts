@@ -25,3 +25,11 @@ export function isRetryableStatus(status: number): boolean {
 export function jitter(delayMs: number): number {
   return delayMs * (0.5 + Math.random() / 2)
 }
+
+export function totalBackoffMs(options: BackoffOptions): number {
+  let total = 0
+  for (let attempt = 0; attempt < options.attempts; attempt++) {
+    total += Math.min(options.baseDelayMs * 2 ** attempt, options.maxDelayMs)
+  }
+  return total
+}

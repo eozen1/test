@@ -33,3 +33,7 @@ export function totalBackoffMs(options: BackoffOptions): number {
   }
   return total
 }
+
+export function clampDelay(delayMs: number, options: BackoffOptions): number {
+  return Math.max(0, Math.min(delayMs, options.maxDelayMs))
+}

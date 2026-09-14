@@ -1,0 +1,8 @@
+import type { Product } from '../types'
+
+export default {
+  "sku": "TOTE-0306",
+  "name": "White Nylon Tote - Large",
+  "priceCents": 3450,
+  "weightGrams": 300
+} satisfies Product
